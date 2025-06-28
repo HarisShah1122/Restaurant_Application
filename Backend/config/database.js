@@ -1,22 +1,10 @@
 const { Sequelize } = require('sequelize');
-const config = require('./index');
 
-const sequelize = new Sequelize(
-  config.db.name,
-  config.db.user,
-  config.db.password,
-  {
-    host: config.db.host,
-    dialect: config.db.dialect,
-    port: config.db.port,
-    pool: {
-      max: 5,
-      min: 0,
-      idle: 10000,
-    },
-    logging: config.nodeEnv === 'development' ? console.log : false, 
-  }
-);
+const sequelize = new Sequelize({
+  dialect: 'sqlite',
+  storage: process.env.DB_NAME || 'restaurant.db',
+  logging: process.env.NODE_ENV === 'development' ? console.log : false,
+});
 
 sequelize
   .authenticate()
@@ -25,6 +13,7 @@ sequelize
   })
   .catch((err) => {
     console.error('Unable to connect to the database:', err);
+    process.exit(1); // Exit on connection failure
   });
 
 module.exports = sequelize;

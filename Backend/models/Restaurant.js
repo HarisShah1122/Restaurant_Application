@@ -1,11 +1,8 @@
 const { Sequelize, DataTypes } = require('sequelize');
 const { v4: uuidv4 } = require('uuid');
-const sequelize = new Sequelize({
-  dialect: 'sqlite',
-  storage: process.env.DB_NAME || 'restaurant.db',
-});
+const sequelize = require('../config/database');
 
-const Restaurant = sequelize.define('Restaurant', {
+const FoodPlace = sequelize.define('FoodPlace', {
   id: {
     type: DataTypes.UUID,
     defaultValue: () => uuidv4(),
@@ -28,12 +25,23 @@ const Restaurant = sequelize.define('Restaurant', {
     allowNull: false,
     validate: { min: 0, max: 5 },
   },
-  image: {
-    type: DataTypes.STRING,
+  images: {
+    type: DataTypes.JSON,
     allowNull: false,
+    validate: {
+      notEmpty: true,
+      isValidImages(value) {
+        if (!Array.isArray(value)) throw new Error('Images must be an array');
+        if (value.length < 1 || value.length > 30) throw new Error('Images must contain 1 to 30 items');
+        if (!value.every(item => typeof item === 'string' && item.trim().length > 0)) {
+          throw new Error('Each image must be a non-empty string');
+        }
+      },
+    },
   },
 }, {
   timestamps: false,
+  tableName: 'FoodPlaces',
 });
 
-module.exports = { Restaurant, sequelize };
+module.exports = { FoodPlace, sequelize };
