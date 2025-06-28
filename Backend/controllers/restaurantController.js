@@ -1,4 +1,4 @@
-const { FoodPlace } = require('../models/restaurant');
+const { FoodPlace, sequelize } = require('../models/restaurant');
 const { validationResult } = require('express-validator');
 const { validationRestaurant, validateSearchQuery, validateFilters } = require('../helpers/validation');
 const { Op } = require('sequelize');
@@ -20,17 +20,32 @@ const authenticate = (req, res, next) => {
 };
 
 module.exports.controller = (app) => {
-
   app.post('/restaurants', authenticate, validationRestaurant, async (req, res) => {
+    const transaction = await sequelize.transaction();
     try {
       const errors = validationResult(req);
-      if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+      if (!errors.isEmpty()) {
+        await transaction.rollback();
+        return res.status(400).json({ errors: errors.array() });
+      }
       const { name, cuisine, location, rating, images } = req.body;
-      console.log('Creating food place with images:', images);
-      const newFoodPlace = await FoodPlace.create({ name, cuisine, location, rating, images });
+      const newFoodPlace = await FoodPlace.create(
+        { name, cuisine, location, rating, images },
+        { transaction }
+      );
+      await transaction.commit();
       res.status(201).json(newFoodPlace);
     } catch (error) {
-      console.error('Sequelize error:', error);
+      await transaction.rollback();
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.get('/all-restaurants', authenticate, async (req, res) => {
+    try {
+      const foodPlaces = await FoodPlace.findAll();
+      res.json(foodPlaces);
+    } catch (error) {
       res.status(400).json({ error: error.message });
     }
   });
@@ -52,14 +67,14 @@ module.exports.controller = (app) => {
         where: whereClause,
         limit,
         offset,
-        order: [['rating', 'DESC']],
+        order: [['rating', 'DESC']]
       });
 
       res.json({
         data: rows,
         currentPage: page,
         totalPages: Math.ceil(count / limit),
-        totalItems: count,
+        totalItems: count
       });
     } catch (error) {
       res.status(400).json({ error: error.message });
@@ -75,43 +90,54 @@ module.exports.controller = (app) => {
       res.status(400).json({ error: error.message });
     }
   });
-  
+
   app.put('/restaurants/:id', authenticate, validationRestaurant, async (req, res) => {
+    const transaction = await sequelize.transaction();
     try {
       const errors = validationResult(req);
-      if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+      if (!errors.isEmpty()) {
+        await transaction.rollback();
+        return res.status(400).json({ errors: errors.array() });
+      }
       const { name, cuisine, location, rating, images } = req.body;
-      console.log('Updating food place with images:', images);
-      const foodPlace = await FoodPlace.findByPk(req.params.id);
-      if (!foodPlace) return res.status(404).json({ error: 'Food place not found' });
-      await foodPlace.update({ name, cuisine, location, rating, images });
+      const foodPlace = await FoodPlace.findByPk(req.params.id, { transaction });
+      if (!foodPlace) {
+        await transaction.rollback();
+        return res.status(404).json({ error: 'Food place not found' });
+      }
+      await foodPlace.update({ name, cuisine, location, rating, images }, { transaction });
+      await transaction.commit();
       res.json(foodPlace);
     } catch (error) {
-      console.error('Sequelize error:', error);
+      await transaction.rollback();
       res.status(400).json({ error: error.message });
     }
   });
-
 
   app.delete('/restaurants/:id', authenticate, async (req, res) => {
+    const transaction = await sequelize.transaction();
     try {
-      const foodPlace = await FoodPlace.findByPk(req.params.id);
-      if (!foodPlace) return res.status(404).json({ error: 'Food place not found' });
-      await foodPlace.destroy();
+      const foodPlace = await FoodPlace.findByPk(req.params.id, { transaction });
+      if (!foodPlace) {
+        await transaction.rollback();
+        return res.status(404).json({ error: 'Food place not found' });
+      }
+      await foodPlace.destroy({ transaction });
+      await transaction.commit();
       res.status(204).send();
     } catch (error) {
+      await transaction.rollback();
       res.status(400).json({ error: error.message });
     }
   });
 
- 
   app.get('/suggestions', authenticate, validateSearchQuery, async (req, res) => {
     try {
       const { query = '' } = req.query;
       const suggestions = await FoodPlace.findAll({
         attributes: ['name'],
         where: { name: { [Op.like]: `%${query}%` } },
-        limit: 5,
+        limit: 5
       });
       res.json(suggestions.map(s => s.name));
     } catch (error) {

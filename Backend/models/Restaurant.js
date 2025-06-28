@@ -6,24 +6,25 @@ const FoodPlace = sequelize.define('FoodPlace', {
   id: {
     type: DataTypes.UUID,
     defaultValue: () => uuidv4(),
-    primaryKey: true,
+    primaryKey: true
   },
   name: {
-    type: DataTypes.STRING,
+    type: DataTypes.STRING(255),
     allowNull: false,
+    unique: true
   },
   cuisine: {
-    type: DataTypes.STRING,
-    allowNull: false,
+    type: DataTypes.STRING(255),
+    allowNull: false
   },
   location: {
-    type: DataTypes.STRING,
-    allowNull: false,
+    type: DataTypes.STRING(255),
+    allowNull: false
   },
   rating: {
     type: DataTypes.FLOAT,
     allowNull: false,
-    validate: { min: 0, max: 5 },
+    validate: { min: 0, max: 5 }
   },
   images: {
     type: DataTypes.JSON,
@@ -36,12 +37,12 @@ const FoodPlace = sequelize.define('FoodPlace', {
         if (!value.every(item => typeof item === 'string' && item.trim().length > 0)) {
           throw new Error('Each image must be a non-empty string');
         }
-      },
-    },
-  },
+      }
+    }
+  }
 }, {
   timestamps: false,
-  tableName: 'FoodPlaces',
+  tableName: 'FoodPlaces'
 });
 
 module.exports = { FoodPlace, sequelize };

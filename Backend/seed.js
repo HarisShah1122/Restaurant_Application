@@ -1,24 +1,35 @@
-const { Restaurant, sequelize } = require('./src/models/restaurant');
+const { FoodPlace, sequelize } = require('./src/models/restaurant');
 const { v4: uuidv4 } = require('uuid');
 
 const seedData = async () => {
   await sequelize.sync({ force: false }); 
-  const restaurants = [];
-  const cuisines = ['Biryani', 'Karahi', 'Tikka', 'Nihari', 'Pulao', 'Haleem', 'Chapli', 'Seekh', 'Qorma', 'Samosa'];
-  const locations = ['Karachi', 'Lahore', 'Peshawar', 'Islamabad', 'Multan', 'Faisalabad', 'Rawalpindi', 'Quetta', 'Hyderabad', 'Sialkot'];
+  const cuisines = ['Indian', 'Seafood', 'Chinese', 'Pakistani', 'Fast Food', 'Mediterranean', 'Cafe', 'Middle Eastern', 'Italian', 'Japanese'];
+  const locations = ['Karachi', 'Lahore', 'Islamabad', 'Rawalpindi', 'Multan', 'Hyderabad', 'Quetta', 'Peshawar', 'Faisalabad'];
+  const imageBase = '/images/';
+  const imageNames = ['restaurant1.png', 'restaurant2.png', 'restaurant3.png', 'restaurant4.png', 'restaurant5.png'];
 
-  for (let i = 1; i <= 30; i++) {
-    const name = `${locations[i % 10]}Delight${i}`;
-    const cuisine = cuisines[i % 10];
-    const location = locations[i % 10];
-    const rating = (Math.random() * (5 - 3) + 3).toFixed(1);
-    const images = Array.from({ length: 30 }, (_, j) => `/images/${name.toLowerCase().replace('delight', '')}${j + 1}.png`);
-    restaurants.push({ id: uuidv4(), name, cuisine, location, rating, images });
+  const restaurants = [];
+  for (let i = 0; i < 20000; i++) {
+    const numImages = Math.floor(Math.random() * 3) + 1; 
+    const images = Array.from({ length: numImages }, () => `${imageBase}${imageNames[Math.floor(Math.random() * imageNames.length)]}`);
+    restaurants.push({
+      id: uuidv4(),
+      name: `Restaurant_${i + 1}`,
+      cuisine: cuisines[Math.floor(Math.random() * cuisines.length)],
+      location: locations[Math.floor(Math.random() * locations.length)],
+      rating: (Math.random() * 2.5 + 2.5).toFixed(1), 
+      images: images
+    });
   }
 
-  await Restaurant.bulkCreate(restaurants);
-  console.log('Database seeded with 30 restaurants!');
-  process.exit();
+  try {
+    await FoodPlace.bulkCreate(restaurants, { batchSize: 1000 }); // Batch insert for performance
+    console.log('Database seeded with 20,000 restaurants!');
+  } catch (error) {
+    console.error('Error seeding database:', error);
+  } finally {
+    process.exit();
+  }
 };
 
 seedData().catch(err => console.error(err));

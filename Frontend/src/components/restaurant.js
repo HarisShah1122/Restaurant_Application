@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import RestaurantCard from './restaurantCard';
-import LoadingSpinner from './loadingSpinner';
+import RestaurantCard from './RestaurantCard';
+import LoadingSpinner from './LoadingSpinner';
 import { useNavigate } from 'react-router-dom';
 
 const API_URL = 'http://localhost:8081/api';
@@ -16,6 +16,8 @@ function Restaurant() {
   const [totalPages, setTotalPages] = useState(1);
   const [token, setToken] = useState(localStorage.getItem('token') || '');
   const [user, setUser] = useState(null);
+  const [searchQuery, setSearchQuery] = useState(''); 
+  const [showModal, setShowModal] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,7 +26,7 @@ function Restaurant() {
 
   useEffect(() => {
     if (user) fetchRestaurants();
-  }, [page, user]);
+  }, [page, user, searchQuery]); 
 
   const checkAuth = async () => {
     setLoading(true);
@@ -37,7 +39,7 @@ function Restaurant() {
       setUser(null);
       localStorage.removeItem('token');
       setToken('');
-      navigate('/login');
+      navigate('/login'); 
     } finally {
       setLoading(false);
     }
@@ -48,45 +50,13 @@ function Restaurant() {
     setLoading(true);
     try {
       const response = await axios.get(`${API_URL}/restaurants`, {
-        params: { page, limit: 2 },
+        params: { page, limit: 2, query: searchQuery }, 
         headers: { Authorization: `Bearer ${token}` },
       });
       setRestaurants(response.data.data);
       setTotalPages(response.data.totalPages);
     } catch (error) {
       console.error('Error fetching restaurants:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLogin = async (email, password) => {
-    setLoading(true);
-    try {
-      const response = await axios.post(`${API_URL}/login`, { email, password });
-      const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      setToken(token);
-      setUser(user);
-      navigate('/restaurant');
-    } catch (error) {
-      console.error('Login failed:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSignup = async (firstname, lastname, email, password, role = 'customer') => {
-    setLoading(true);
-    try {
-      const response = await axios.post(`${API_URL}/signup`, { firstname, lastname, email, password, role });
-      const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      setToken(token);
-      setUser(user);
-      navigate('/restaurant');
-    } catch (error) {
-      console.error('Signup failed:', error);
     } finally {
       setLoading(false);
     }
@@ -131,6 +101,7 @@ function Restaurant() {
       }, { headers: { Authorization: `Bearer ${token}` } });
       fetchRestaurants();
       setNewRestaurant({ name: '', cuisine: '', location: '', rating: '', images: [] });
+      setShowModal(false); 
     } catch (error) {
       console.error('Error saving restaurant:', error);
     } finally {
@@ -173,69 +144,111 @@ function Restaurant() {
     if (newPage > 0 && newPage <= totalPages) setPage(newPage);
   };
 
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+    setPage(1);
+  };
+
   if (loading) return <LoadingSpinner />;
 
   return (
     <div className="container mt-5">
-      <h2 className="text-center mb-4 text-success">Welcome to Desi Diner!</h2>
+      <h2
+        className="text-center mb-4 gradient-text animate__animated animate__fadeInDown"
+        style={{
+          fontWeight: 'bold',
+          fontFamily: "'Roboto Slab', 'Arial Black', 'sans-serif'",
+          background: 'linear-gradient(90deg, #ff416c, #ff4b2b)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          animation: 'fadeInDown 1.2s ease-in-out',
+        }}
+      >
+        Desi Delights: Feast with Flavor!
+      </h2>
       <p className="lead text-muted text-center">
         {new Date().toLocaleTimeString('en-PK', { timeZone: 'Asia/Karachi' })}, {new Date().toLocaleDateString('en-PK', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
       </p>
-      {!user ? (
-        <div>
-          <h3>Login</h3>
-          <form onSubmit={(e) => { e.preventDefault(); handleLogin(e.target.email.value, e.target.password.value); }}>
-            <input type="email" name="email" placeholder="Email" className="form-control mb-2" required />
-            <input type="password" name="password" placeholder="Password" className="form-control mb-2" required />
-            <button type="submit" className="btn btn-primary">Login</button>
-          </form>
-          <h3>Signup</h3>
-          <form onSubmit={(e) => { e.preventDefault(); handleSignup(e.target.firstname.value, e.target.lastname.value, e.target.email.value, e.target.password.value, e.target.role.value); }}>
-            <input type="text" name="firstname" placeholder="First Name" className="form-control mb-2" required />
-            <input type="text" name="lastname" placeholder="Last Name" className="form-control mb-2" required />
-            <input type="email" name="email" placeholder="Email" className="form-control mb-2" required />
-            <input type="password" name="password" placeholder="Password" className="form-control mb-2" required />
-            <select name="role" className="form-control mb-2">
-              <option value="customer">Customer</option>
-              <option value="admin">Admin</option>
-              <option value="staff">Staff</option>
-            </select>
-            <button type="submit" className="btn btn-primary">Signup</button>
-          </form>
-        </div>
-      ) : (
+      {user ? (
         <>
           <div className="text-end mb-3">
             <button className="btn btn-danger" onClick={handleLogout}>Logout</button>
+            <button className="btn btn-primary ms-2" onClick={() => setShowModal(true)}>Add Restaurant</button>
           </div>
-          <form onSubmit={saveRestaurant} className="mb-5">
-            <h3>{selectedRestaurant ? 'Update Restaurant' : 'Add New Restaurant'}</h3>
+          <div className="mb-3">
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Search by restaurant name..."
+              value={searchQuery}
+              onChange={handleSearchChange}
+            />
+          </div>
+          <form onSubmit={saveRestaurant} className="mb-5" style={{ display: showModal ? 'block' : 'none' }}>
+            <div className="modal" tabIndex="-1" style={{ display: showModal ? 'block' : 'none' }}>
+              <div className="modal-dialog">
+                <div className="modal-content">
+                  <div className="modal-header">
+                    <h5 className="modal-title">Add New Restaurant</h5>
+                    <button type="button" className="btn-close" onClick={() => setShowModal(false)}></button>
+                  </div>
+                  <div className="modal-body">
+                    <div className="mb-3">
+                      <input type="text" className="form-control" name="name" value={newRestaurant.name} onChange={handleInputChange} placeholder="Restaurant Name" required />
+                    </div>
+                    <div className="mb-3">
+                      <input type="text" className="form-control" name="cuisine" value={newRestaurant.cuisine} onChange={handleInputChange} placeholder="Cuisine" required />
+                    </div>
+                    <div className="mb-3">
+                      <input type="text" className="form-control" name="location" value={newRestaurant.location} onChange={handleInputChange} placeholder="Location" required />
+                    </div>
+                    <div className="mb-3">
+                      <input type="number" className="form-control" name="rating" value={newRestaurant.rating} onChange={handleInputChange} placeholder="Rating (0-5)" min="0" max="5" step="0.1" required />
+                    </div>
+                    <div className="mb-3">
+                      <input type="file" className="form-control" multiple onChange={handleImageChange} accept="image/png,image/jpeg" />
+                    </div>
+                  </div>
+                  <div className="modal-footer">
+                    <button type="submit" className="btn btn-primary">Save Restaurant</button>
+                    <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Close</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </form>
+          <form onSubmit={updateRestaurant} className="mb-5" style={{ display: selectedRestaurant ? 'block' : 'none' }}>
+            <h3>Update Restaurant</h3>
             <div className="mb-3">
-              <input type="text" className="form-control" name="name" value={selectedRestaurant ? selectedRestaurant.name : newRestaurant.name} onChange={handleInputChange} placeholder="Restaurant Name" required />
+              <input type="text" className="form-control" name="name" value={selectedRestaurant ? selectedRestaurant.name : ''} onChange={handleInputChange} placeholder="Restaurant Name" required />
             </div>
             <div className="mb-3">
-              <input type="text" className="form-control" name="cuisine" value={selectedRestaurant ? selectedRestaurant.cuisine : newRestaurant.cuisine} onChange={handleInputChange} placeholder="Cuisine" required />
+              <input type="text" className="form-control" name="cuisine" value={selectedRestaurant ? selectedRestaurant.cuisine : ''} onChange={handleInputChange} placeholder="Cuisine" required />
             </div>
             <div className="mb-3">
-              <input type="text" className="form-control" name="location" value={selectedRestaurant ? selectedRestaurant.location : newRestaurant.location} onChange={handleInputChange} placeholder="Location" required />
+              <input type="text" className="form-control" name="location" value={selectedRestaurant ? selectedRestaurant.location : ''} onChange={handleInputChange} placeholder="Location" required />
             </div>
             <div className="mb-3">
-              <input type="number" className="form-control" name="rating" value={selectedRestaurant ? selectedRestaurant.rating : newRestaurant.rating} onChange={handleInputChange} placeholder="Rating (0-5)" min="0" max="5" step="0.1" required />
+              <input type="number" className="form-control" name="rating" value={selectedRestaurant ? selectedRestaurant.rating : ''} onChange={handleInputChange} placeholder="Rating (0-5)" min="0" max="5" step="0.1" required />
             </div>
             <div className="mb-3">
               <input type="file" className="form-control" multiple onChange={handleImageChange} accept="image/png,image/jpeg" />
             </div>
-            <button type="submit" className="btn btn-primary">{selectedRestaurant ? 'Update' : 'Save'} Restaurant</button>
-            {selectedRestaurant && <button type="button" className="btn btn-secondary ms-2" onClick={() => setSelectedRestaurant(null)}>Cancel</button>}
+            <button type="submit" className="btn btn-primary">Update Restaurant</button>
+            <button type="button" className="btn btn-secondary ms-2" onClick={() => setSelectedRestaurant(null)}>Cancel</button>
           </form>
           <div className="row">
-            {restaurants.map((restaurant) => (
-              <div key={restaurant.id} className="col-md-6 mb-3">
-                <RestaurantCard restaurant={restaurant} />
-                <button className="btn btn-warning w-100 mb-1" onClick={() => setSelectedRestaurant(restaurant)}>Edit</button>
-                <button className="btn btn-danger w-100" onClick={() => deleteRestaurant(restaurant.id)}>Delete</button>
-              </div>
-            ))}
+            {restaurants.length > 0 ? (
+              restaurants.map((restaurant) => (
+                <div key={restaurant.id} className="col-md-6 mb-3">
+                  <RestaurantCard restaurant={restaurant} />
+                  <button className="btn btn-warning w-100 mb-1" onClick={() => setSelectedRestaurant(restaurant)}>Edit</button>
+                  <button className="btn btn-danger w-100" onClick={() => deleteRestaurant(restaurant.id)}>Delete</button>
+                </div>
+              ))
+            ) : (
+              <p className="text-center">No restaurants found for "{searchQuery}".</p>
+            )}
           </div>
           <nav aria-label="Page navigation">
             <ul className="pagination justify-content-center">
@@ -253,6 +266,10 @@ function Restaurant() {
             </ul>
           </nav>
         </>
+      ) : (
+        <div className="text-center">
+          <p>Please <a href="/login">login</a> to view restaurants.</p>
+        </div>
       )}
     </div>
   );
