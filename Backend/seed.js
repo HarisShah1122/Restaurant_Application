@@ -23,7 +23,7 @@ const seedData = async () => {
   }
 
   try {
-    await FoodPlace.bulkCreate(restaurants, { batchSize: 1000 }); // Batch insert for performance
+    await FoodPlace.bulkCreate(restaurants, { batchSize: 1000 }); 
     console.log('Database seeded with 20,000 restaurants!');
   } catch (error) {
     console.error('Error seeding database:', error);

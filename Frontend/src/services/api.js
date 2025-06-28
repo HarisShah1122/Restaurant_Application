@@ -9,12 +9,40 @@ const api = axios.create({
   },
 });
 
-// Mock data (replace with real API)
+// Mock data with images from public/images
 const mockRestaurants = [
-  { id: 1, name: 'Karachi Spice', cuisine: 'Biryani', location: 'Karachi', rating: 4.5 },
-  { id: 2, name: 'Lahore Grill', cuisine: 'Karahi', location: 'Lahore', rating: 4.2 },
-  { id: 3, name: 'Peshawar Tikka', cuisine: 'Tikka', location: 'Peshawar', rating: 4.7 },
-  { id: 4, name: 'Islamabad Delight', cuisine: 'Nihari', location: 'Islamabad', rating: 4.0 },
+  { 
+    id: 1, 
+    name: 'Karachi Spice', 
+    cuisine: 'Biryani', 
+    location: 'Karachi', 
+    rating: 4.5,
+    images: ['/images/karachi-spice1.jpg', '/images/karachi-spice2.jpg'] 
+  },
+  { 
+    id: 2, 
+    name: 'Lahore Grill', 
+    cuisine: 'Karahi', 
+    location: 'Lahore', 
+    rating: 4.2,
+    images: ['/images/lahore-grill1.jpg', '/images/lahore-grill2.jpg'] 
+  },
+  { 
+    id: 3, 
+    name: 'Peshawar Tikka', 
+    cuisine: 'Tikka', 
+    location: 'Peshawar', 
+    rating: 4.7,
+    images: ['/images/peshawar-tikka1.jpg', '/images/peshawar-tikka2.jpg'] 
+  },
+  { 
+    id: 4, 
+    name: 'Islamabad Delight', 
+    cuisine: 'Nihari', 
+    location: 'Islamabad', 
+    rating: 4.0,
+    images: ['/images/islamabad-delight1.jpg', '/images/islamabad-delight2.jpg'] 
+  },
 ];
 
 export const searchRestaurants = async (query, filters) => {
