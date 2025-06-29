@@ -64,7 +64,7 @@ app.use((err, req, res, next) => {
 const port = process.env.PORT || 8081;
 sequelize.authenticate()
   .then(() => {
-    return sequelize.sync({ force: false, alter: true }); // Add alter option for schema updates
+    return sequelize.sync({ force: false, alter: true }); 
   })
   .then(() => {
     app.listen(port, () => {

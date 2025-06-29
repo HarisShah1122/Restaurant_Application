@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@coreui/icons": "^3.0.1",
+    "@coreui/react": "^5.7.0",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
@@ -20,9 +22,9 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
- "eslintConfig": {
-  "extends": "react-app"
-},
+  "eslintConfig": {
+    "extends": "react-app"
+  },
   "browserslist": {
     "production": [
       ">0.2%",

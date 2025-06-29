@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import RestaurantCard from './RestaurantCard';
-import LoadingSpinner from './LoadingSpinner';
 import { useNavigate } from 'react-router-dom';
 import {
   CCol,
@@ -33,9 +31,10 @@ import {
 import { cilPlus } from '@coreui/icons';
 import CIcon from '@coreui/icons-react';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import { searchRestaurants } from './api';
+import LoadingSpinner from './LoadingSpinner'; // Ensure this component exists
 
 const API_URL = 'http://localhost:8081/api';
-const config = { jwtSecret: '8Kj9mPq2v' }; 
 
 function Restaurant() {
   const [restaurants, setRestaurants] = useState([]);
@@ -46,21 +45,59 @@ function Restaurant() {
   const [totalPages, setTotalPages] = useState(1);
   const [token, setToken] = useState(localStorage.getItem('token') || '');
   const [user, setUser] = useState(null);
-  const [searchQuery, setSearchQuery] = useState(''); 
+  const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [modalData, setModalData] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [initialRestaurants, setInitialRestaurants] = useState([
+    { id: 1, name: 'Karachi Biryani House', cuisine: 'Biryani', location: 'Karachi', rating: 4.5, images: ['/images/karachispice.jpg'], description: 'A renowned spot for authentic Biryani.', priceRange: '$$$', contact: '+92-321-1234567', openingHours: '10:00 AM - 11:00 PM', menu: ['Chicken Biryani', 'Mutton Biryani'], reviews: [{ user: 'Ali', rating: 4.5, comment: 'Best Biryani!' }] },
+    { id: 2, name: 'Karachi Karahi Delight', cuisine: 'Karahi', location: 'Karachi', rating: 4.3, images: ['/images/karachispice.jpg'], description: 'Famous for sizzling Karahi.', priceRange: '$$', contact: '+92-321-7654321', openingHours: '11:00 AM - 10:00 PM', menu: ['Chicken Karahi'], reviews: [{ user: 'Ahmed', rating: 4.3, comment: 'Love the spices!' }] },
+    { id: 3, name: 'Karachi Tikka Palace', cuisine: 'Tikka', location: 'Karachi', rating: 4.6, images: ['/images/karachispice.jpg'], description: 'Juicy Tikka with charcoal grilling.', priceRange: '$$$', contact: '+92-321-4567890', openingHours: '12:00 PM - 11:00 PM', menu: ['Chicken Tikka'], reviews: [{ user: 'Hassan', rating: 4.6, comment: 'Excellent Tikka!' }] },
+    { id: 4, name: 'Karachi Nihari Corner', cuisine: 'Nihari', location: 'Karachi', rating: 4.2, images: ['/images/karachispice.jpg'], description: 'Slow-cooked Nihari with rich flavors.', priceRange: '$$', contact: '+92-321-9876543', openingHours: '9:00 AM - 9:00 PM', menu: ['Beef Nihari'], reviews: [{ user: 'Omar', rating: 4.2, comment: 'Tasty!' }] },
+    { id: 5, name: 'Karachi Haleem House', cuisine: 'Haleem', location: 'Karachi', rating: 4.4, images: ['/images/karachiHaleem.jpg'], description: 'Specializes in rich and creamy Haleem.', priceRange: '$$', contact: '+92-321-5555555', openingHours: '9:00 AM - 10:00 PM', menu: ['Chicken Haleem'], reviews: [{ user: 'Khalid', rating: 4.4, comment: 'Best Haleem!' }] },
+    { id: 6, name: 'Lahore Biryani Haven', cuisine: 'Biryani', location: 'Lahore', rating: 4.4, images: ['/images/lahoreGrill.jpg'], description: 'Flavorful Biryani with a local twist.', priceRange: '$$$', contact: '+92-322-1234567', openingHours: '10:00 AM - 11:00 PM', menu: ['Chicken Biryani'], reviews: [{ user: 'Ali', rating: 4.4, comment: 'Amazing flavors!' }] },
+    { id: 7, name: 'Lahore Karahi Spot', cuisine: 'Karahi', location: 'Lahore', rating: 4.5, images: ['/images/lahoreGrill.jpg'], description: 'Sizzling Karahi with authentic spices.', priceRange: '$$', contact: '+92-322-7654321', openingHours: '11:00 AM - 10:00 PM', menu: ['Chicken Karahi'], reviews: [{ user: 'Ahmed', rating: 4.5, comment: 'Best Karahi!' }] },
+    { id: 8, name: 'Lahore Tikka House', cuisine: 'Tikka', location: 'Lahore', rating: 4.7, images: ['/images/lahoreGrill.jpg'], description: 'Tikka grilled to perfection.', priceRange: '$$$', contact: '+92-322-4567890', openingHours: '12:00 PM - 11:00 PM', menu: ['Chicken Tikka'], reviews: [{ user: 'Hassan', rating: 4.7, comment: 'Perfect Tikka!' }] },
+    { id: 9, name: 'Lahore Nihari Place', cuisine: 'Nihari', location: 'Lahore', rating: 4.1, images: ['/images/lahoreGrill.jpg'], description: 'Rich Nihari with a Lahori touch.', priceRange: '$$', contact: '+92-322-9876543', openingHours: '9:00 AM - 9:00 PM', menu: ['Beef Nihari'], reviews: [{ user: 'Omar', rating: 4.1, comment: 'Good flavor.' }] },
+    { id: 10, name: 'Islamabad Biryani Garden', cuisine: 'Biryani', location: 'Islamabad', rating: 4.3, images: ['/images/islamabadDelight.jpg'], description: 'Authentic Biryani with a modern twist.', priceRange: '$$$', contact: '+92-334-1234567', openingHours: '10:00 AM - 11:00 PM', menu: ['Chicken Biryani'], reviews: [{ user: 'Ali', rating: 4.3, comment: 'Delicious!' }] },
+    { id: 11, name: 'Islamabad Karahi Hub', cuisine: 'Karahi', location: 'Islamabad', rating: 4.4, images: ['/images/islamabadDelight.jpg'], description: 'Sizzling Karahi with fresh ingredients.', priceRange: '$$', contact: '+92-334-7654321', openingHours: '11:00 AM - 10:00 PM', menu: ['Chicken Karahi'], reviews: [{ user: 'Ahmed', rating: 4.4, comment: 'Excellent spices!' }] },
+    { id: 12, name: 'Islamabad Tikka Corner', cuisine: 'Tikka', location: 'Islamabad', rating: 4.6, images: ['/images/islamabadDelight.jpg'], description: 'Tikka with traditional methods.', priceRange: '$$$', contact: '+92-334-4567890', openingHours: '12:00 PM - 11:00 PM', menu: ['Chicken Tikka'], reviews: [{ user: 'Hassan', rating: 4.6, comment: 'Best Tikka!' }] },
+    { id: 13, name: 'Islamabad Nihari Spot', cuisine: 'Nihari', location: 'Islamabad', rating: 4.2, images: ['/images/islamabadDelight.jpg'], description: 'Slow-cooked Nihari with rich flavors.', priceRange: '$$', contact: '+92-334-9876543', openingHours: '9:00 AM - 9:00 PM', menu: ['Beef Nihari'], reviews: [{ user: 'Omar', rating: 4.2, comment: 'Tasty!' }] },
+    { id: 14, name: 'Peshawar Biryani Place', cuisine: 'Biryani', location: 'Peshawar', rating: 4.6, images: ['/images/peshawarTikka.jpg'], description: 'Flavorful Biryani with a Peshawari twist.', priceRange: '$$$', contact: '+92-333-1234567', openingHours: '10:00 AM - 11:00 PM', menu: ['Chicken Biryani'], reviews: [{ user: 'Ali', rating: 4.6, comment: 'Amazing taste!' }] },
+    { id: 15, name: 'Peshawar Karahi House', cuisine: 'Karahi', location: 'Peshawar', rating: 4.5, images: ['/images/peshawarTikka.jpg'], description: 'Authentic Karahi with fresh spices.', priceRange: '$$', contact: '+92-333-7654321', openingHours: '11:00 AM - 10:00 PM', menu: ['Chicken Karahi'], reviews: [{ user: 'Ahmed', rating: 4.5, comment: 'Love it!' }] },
+    { id: 16, name: 'Peshawar Tikka Haven', cuisine: 'Tikka', location: 'Peshawar', rating: 4.7, images: ['/images/peshawarTikka.jpg'], description: 'Specializes in juicy Tikka with traditional charcoal grilling.', priceRange: '$$$', contact: '+92-333-4567890', openingHours: '12:00 PM - 12:00 AM', menu: ['Chicken Tikka'], reviews: [{ user: 'Hassan', rating: 4.7, comment: 'Perfect Tikka experience!' }] },
+    { id: 17, name: 'Peshawar Nihari Delight', cuisine: 'Nihari', location: 'Peshawar', rating: 4.3, images: ['/images/peshawarTikka.jpg'], description: 'Rich and slow-cooked Nihari with a Peshawari touch.', priceRange: '$$', contact: '+92-333-9876543', openingHours: '9:00 AM - 9:00 PM', menu: ['Beef Nihari'], reviews: [{ user: 'Omar', rating: 4.3, comment: 'Delicious!' }] },
+  ]);
   const navigate = useNavigate();
 
   useEffect(() => {
     checkAuth();
+    setRestaurants(initialRestaurants);
+    setTotalPages(Math.ceil(initialRestaurants.length / 2));
   }, []);
 
-  useEffect(() => {
-    if (user) fetchRestaurants();
-  }, [page, user, searchQuery]); 
+  const fetchRestaurants = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const filters = { page, limit: 2 };
+      if (searchQuery) {
+        const results = await searchRestaurants(searchQuery, filters);
+        setRestaurants(results);
+        setTotalPages(Math.ceil(results.length / 2));
+      } else {
+        const paginated = initialRestaurants.slice((page - 1) * 2, page * 2);
+        setRestaurants(paginated);
+        setTotalPages(Math.ceil(initialRestaurants.length / 2));
+      }
+    } catch (error) {
+      console.error('Error fetching restaurants:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const checkAuth = async () => {
     setLoading(true);
@@ -73,24 +110,7 @@ function Restaurant() {
       setUser(null);
       localStorage.removeItem('token');
       setToken('');
-      navigate('/login'); 
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchRestaurants = async () => {
-    if (!user) return;
-    setLoading(true);
-    try {
-      const response = await axios.get(`${API_URL}/restaurants`, {
-        params: { page, limit: 2, query: searchQuery }, 
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setRestaurants(response.data.data);
-      setTotalPages(response.data.totalPages);
-    } catch (error) {
-      console.error('Error fetching restaurants:', error);
+      navigate('/login');
     } finally {
       setLoading(false);
     }
@@ -137,22 +157,16 @@ function Restaurant() {
       return;
     }
 
-    try {
-      await axios.post(`${API_URL}/restaurants`, {
-        ...newRestaurant,
-        rating: parseFloat(newRestaurant.rating),
-      }, { headers: { Authorization: `Bearer ${token}` } });
-      setSuccess('Restaurant added successfully');
-      fetchRestaurants();
-      setNewRestaurant({ name: '', cuisine: '', location: '', rating: '', images: [] });
-      setShowModal(false);
-      setTimeout(() => setSuccess(null), 5000);
-    } catch (error) {
-      console.error('Error saving restaurant:', error);
-      setError(error.message || 'Failed to add restaurant');
-    } finally {
-      setFormLoading(false);
-    }
+    const newId = initialRestaurants.length + 1;
+    const newRestaurantData = { id: newId, ...newRestaurant, rating: parseFloat(newRestaurant.rating), images: newRestaurant.images, description: '', priceRange: '', contact: '', openingHours: '', menu: [], reviews: [] };
+    setRestaurants(prev => [...prev, newRestaurantData]);
+    setInitialRestaurants(prev => [...prev, newRestaurantData]);
+    setSuccess('Restaurant added successfully');
+    setNewRestaurant({ name: '', cuisine: '', location: '', rating: '', images: [] });
+    setShowModal(false);
+    setTotalPages(Math.ceil((initialRestaurants.length + 1) / 2));
+    setTimeout(() => setSuccess(null), 5000);
+    setFormLoading(false);
   };
 
   const updateRestaurant = async (e) => {
@@ -168,37 +182,26 @@ function Restaurant() {
       return;
     }
 
-    try {
-      await axios.put(`${API_URL}/restaurants/${selectedRestaurant.id}`, {
-        ...selectedRestaurant,
-        rating: parseFloat(selectedRestaurant.rating),
-      }, { headers: { Authorization: `Bearer ${token}` } });
-      setSuccess('Restaurant updated successfully');
-      fetchRestaurants();
-      setSelectedRestaurant(null);
-      setTimeout(() => setSuccess(null), 5000);
-    } catch (error) {
-      console.error('Error updating restaurant:', error);
-      setError(error.message || 'Failed to update restaurant');
-    } finally {
-      setFormLoading(false);
-    }
+    const updatedRestaurants = restaurants.map(r => r.id === selectedRestaurant.id ? { ...selectedRestaurant, rating: parseFloat(selectedRestaurant.rating) } : r);
+    setRestaurants(updatedRestaurants);
+    setInitialRestaurants(updatedRestaurants);
+    setSuccess('Restaurant updated successfully');
+    setSelectedRestaurant(null);
+    setShowModal(false);
+    setTimeout(() => setSuccess(null), 5000);
+    setFormLoading(false);
   };
 
   const deleteRestaurant = async (id) => {
     if (!user) return navigate('/login');
     setLoading(true);
-    try {
-      await axios.delete(`${API_URL}/restaurants/${id}`, { headers: { Authorization: `Bearer ${token}` } });
-      setSuccess('Restaurant deleted successfully');
-      fetchRestaurants();
-      setTimeout(() => setSuccess(null), 5000);
-    } catch (error) {
-      console.error('Error deleting restaurant:', error);
-      setError(error.message || 'Failed to delete restaurant');
-    } finally {
-      setLoading(false);
-    }
+    const updatedRestaurants = restaurants.filter(r => r.id !== id);
+    setRestaurants(updatedRestaurants);
+    setInitialRestaurants(updatedRestaurants);
+    setTotalPages(Math.ceil(updatedRestaurants.length / 2));
+    setSuccess('Restaurant deleted successfully');
+    setTimeout(() => setSuccess(null), 5000);
+    setLoading(false);
   };
 
   const handlePageChange = (newPage) => {
@@ -208,36 +211,28 @@ function Restaurant() {
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
     setPage(1);
+    fetchRestaurants();
   };
 
   const openModal = (restaurant) => {
-    setModalData(restaurant);
+    console.log('Opening modal for:', restaurant?.name); // Debug log
+    setModalData(restaurant || null);
     setShowModal(true);
   };
 
   const handleAction = (action) => {
-    if (action === 'close') setShowModal(false);
+    console.log('Handling action:', action); // Debug log
+    if (action === 'close') {
+      setShowModal(false);
+      setModalData(null);
+      setSelectedRestaurant(null);
+    }
   };
 
   if (loading) return <LoadingSpinner />;
 
-  // Featured Restaurant Data for Modal
-  const featuredRestaurant = {
-    name: 'Peshawar Tikka',
-    cuisine: 'Tikka',
-    location: 'Peshawar',
-    rating: 4.7,
-    description: 'Specializes in juicy Tikka with traditional charcoal grilling.',
-    priceRange: '$$$',
-    contact: '+92-333-4567890',
-    openingHours: '12:00 PM - 12:00 AM',
-    menu: ['Chicken Tikka', 'Beef Tikka', 'Mutton Tikka'],
-    images: ['/images/peshawarTikka.jpg'],
-    reviews: [
-      { user: 'Hassan', rating: 4.7, comment: 'Perfect Tikka experience!' },
-      { user: 'Fatima', rating: 4.6, comment: 'Highly recommended.' }
-    ]
-  };
+  // Debug: Log modal state
+  console.log('showModal:', showModal, 'modalData:', modalData, 'selectedRestaurant:', selectedRestaurant);
 
   return (
     <CCol xs={12}>
@@ -245,7 +240,7 @@ function Restaurant() {
         <CCardHeader>
           <div className="d-flex justify-content-between align-items-center">
             <strong>Restaurants</strong>
-            <CButton color="primary" onClick={() => setShowModal(true)}>
+            <CButton color="primary" onClick={() => openModal(null)}>
               <CIcon icon={cilPlus} className="me-2" />
               Add Restaurant
             </CButton>
@@ -300,25 +295,32 @@ function Restaurant() {
             Savor authentic Pakistani cuisine {new Date().toLocaleTimeString('en-PK', { timeZone: 'Asia/Karachi', hour: '2-digit', minute: '2-digit', second: '2-digit' })}, {new Date().toLocaleDateString('en-PK', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
           </p>
 
+          {/* Search Input */}
+          <div className="mb-4">
+            <CFormInput
+              type="text"
+              placeholder="Search by restaurant name..."
+              value={searchQuery}
+              onChange={handleSearchChange}
+            />
+          </div>
+
           {/* Navigation/Filter Section */}
           <div className="mb-4">
             <div className="row g-2">
               <div className="col-md-4">
                 <CFormSelect aria-label="All Cuisines">
                   <option>All Cuisines</option>
-                  {/* Add cuisine options dynamically if needed */}
                 </CFormSelect>
               </div>
               <div className="col-md-4">
                 <CFormSelect aria-label="All Locations">
                   <option>All Locations</option>
-                  {/* Add location options dynamically if needed */}
                 </CFormSelect>
               </div>
               <div className="col-md-4">
                 <CFormSelect aria-label="All Ratings">
                   <option>All Ratings</option>
-                  {/* Add rating options dynamically if needed */}
                 </CFormSelect>
               </div>
             </div>
@@ -326,7 +328,7 @@ function Restaurant() {
 
           {/* Modal Option after Navigation/Filter Section */}
           <div className="text-center mb-4">
-            <CButton color="info" onClick={() => openModal(featuredRestaurant)}>View Details</CButton>
+            <CButton color="info" onClick={() => openModal(initialRestaurants.find(r => r.name === 'Peshawar Tikka Haven'))}>View Details</CButton>
           </div>
 
           {/* Restaurant List */}
@@ -386,21 +388,9 @@ function Restaurant() {
           )}
 
           {/* Add Restaurant Modal */}
-          <CModal visible={showModal && !modalData} onClose={() => setShowModal(false)}>
+          <CModal visible={showModal && !modalData && !selectedRestaurant} onClose={() => handleAction('close')}>
             <CModalHeader>
               <CModalTitle>Add New Restaurant</CModalTitle>
-              <CDropdown alignment="end">
-                <CDropdownToggle
-                  color="secondary"
-                  caret={false}
-                  style={{ padding: '6px 12px' }}
-                >
-                  <span style={{ fontSize: '24px', cursor: 'pointer' }}>⋯</span>
-                </CDropdownToggle>
-                <CDropdownMenu>
-                  <CDropdownItem onClick={() => handleAction('close')}>Close</CDropdownItem>
-                </CDropdownMenu>
-              </CDropdown>
             </CModalHeader>
             <CModalBody>
               {error && <CAlert color="danger">{error}</CAlert>}
@@ -462,20 +452,16 @@ function Restaurant() {
                     accept="image/png,image/jpeg"
                   />
                 </div>
+                <CButton color="primary" type="submit" disabled={formLoading}>Save</CButton>
               </CForm>
             </CModalBody>
             <CModalFooter>
-              <CButton color="secondary" onClick={() => setShowModal(false)} disabled={formLoading}>
-                Cancel
-              </CButton>
-              <CButton color="primary" onClick={saveRestaurant} disabled={formLoading}>
-                Save
-              </CButton>
+              <CButton color="secondary" onClick={() => handleAction('close')} disabled={formLoading}>Cancel</CButton>
             </CModalFooter>
           </CModal>
 
-          {/* Edit Restaurant Form */}
-          <CModal visible={!!selectedRestaurant} onClose={() => setSelectedRestaurant(null)}>
+          {/* Edit Restaurant Modal */}
+          <CModal visible={showModal && !!selectedRestaurant} onClose={() => handleAction('close')}>
             <CModalHeader>
               <CModalTitle>Edit Restaurant</CModalTitle>
             </CModalHeader>
@@ -539,20 +525,16 @@ function Restaurant() {
                     accept="image/png,image/jpeg"
                   />
                 </div>
+                <CButton color="primary" type="submit" disabled={formLoading}>Update</CButton>
               </CForm>
             </CModalBody>
             <CModalFooter>
-              <CButton color="secondary" onClick={() => setSelectedRestaurant(null)} disabled={formLoading}>
-                Cancel
-              </CButton>
-              <CButton color="primary" onClick={updateRestaurant} disabled={formLoading}>
-                Update
-              </CButton>
+              <CButton color="secondary" onClick={() => handleAction('close')} disabled={formLoading}>Cancel</CButton>
             </CModalFooter>
           </CModal>
 
           {/* Details Modal */}
-          <CModal visible={showModal && modalData} onClose={() => setShowModal(false)}>
+          <CModal visible={showModal && modalData && !selectedRestaurant} onClose={() => handleAction('close')}>
             <CModalHeader>
               <CModalTitle>{modalData?.name}</CModalTitle>
             </CModalHeader>
@@ -590,7 +572,7 @@ function Restaurant() {
               </div>
             </CModalBody>
             <CModalFooter>
-              <CButton color="secondary" onClick={() => setShowModal(false)}>Close</CButton>
+              <CButton color="secondary" onClick={() => handleAction('close')}>Close</CButton>
             </CModalFooter>
           </CModal>
 
