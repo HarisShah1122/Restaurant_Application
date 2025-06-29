@@ -19,6 +19,13 @@ function Login({ setIsAuthenticated }) {
     if (error) emailRef.current.focus();
   }, [error]);
 
+  useEffect(() => {
+    document.body.style.overflowX = 'hidden';
+    return () => {
+      document.body.style.overflowX = 'auto';
+    };
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -46,15 +53,18 @@ function Login({ setIsAuthenticated }) {
   };
 
   return (
-    <div className="row justify-content-center">
+    <div className="row justify-content-center" style={{ overflowX: 'hidden' }}>
       <div className="col-md-6">
         <div className="card mt-5 animate__animated animate__zoomIn">
           <div className="card-body p-5">
-            <h2 className="card-title text-center mb-4 text-primary">Welcome Back to Desi Diner!</h2>
+            <h2 className="card-title text-center mb-4 text-primary">Welcome Back to Delights: Feast with Flavor!</h2>
             <p className="text-center text-muted mb-4">Sign in to enjoy authentic Pakistani flavors</p>
-            {error && <div className="alert alert-danger alert-dismissible fade show" role="alert">
-              {error} <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>}
+            {error && (
+              <div className="alert alert-danger alert-dismissible fade show" role="alert">
+                {error}{' '}
+                <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            )}
             <form onSubmit={handleSubmit}>
               <div className="mb-4">
                 <label className="form-label">Email</label>
@@ -78,18 +88,23 @@ function Login({ setIsAuthenticated }) {
                   placeholder="Enter your secure password"
                   required
                 />
-                
               </div>
               <div className="mb-4">
                 <div className="progress">
-                  <div className="progress-bar progress-bar-striped progress-bar-animated" style={{ width: `${progress}%` }}></div>
+                  <div
+                    className="progress-bar progress-bar-striped progress-bar-animated"
+                    style={{ width: `${progress}%` }}
+                  ></div>
                 </div>
               </div>
               <button type="submit" className="btn btn-primary w-100" disabled={loading}>
                 {loading ? <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> : 'Login'}
               </button>
               <p className="mt-3 text-center">
-                New here? <Link to="/register" className="text-decoration-none text-primary fw-bold">Join Us Now!</Link>
+                New here?{' '}
+                <Link to="/register" className="text-decoration-none text-primary fw-bold">
+                  Join Us Now!
+                </Link>
               </p>
             </form>
           </div>

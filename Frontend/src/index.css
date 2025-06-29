@@ -1,4 +1,4 @@
-/* src/index.css */
+
 .gradient-text {
   font-weight: bold;
   font-family: 'Poppins', sans-serif;
@@ -14,12 +14,16 @@
   100% { opacity: 1; transform: translateY(0); }
 }
 
-/* Target Bootstrap modal class used by @coreui/react */
+
 .modal {
-  display: block !important; /* Force visibility for testing */
-  z-index: 1050 !important; /* Ensure it’s above other content */
+  display: block !important; 
+  z-index: 1050 !important; 
 }
 
 .modal-backdrop {
-  z-index: 1040 !important; /* Ensure backdrop is below modal */
+  z-index: 1040 !important; 
+}
+
+body, html {
+  overflow-x: hidden;
 }

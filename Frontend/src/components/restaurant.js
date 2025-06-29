@@ -31,7 +31,7 @@ import {
 import { cilPlus } from '@coreui/icons';
 import CIcon from '@coreui/icons-react';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { searchRestaurants } from './api';
+import { searchRestaurants } from '../services/api';
 import LoadingSpinner from './LoadingSpinner'; // Ensure this component exists
 
 const API_URL = 'http://localhost:8081/api';
