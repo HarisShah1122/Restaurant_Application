@@ -19,7 +19,6 @@ import {
   CAlert,
   CForm,
   CFormInput,
-  CFormSelect,
   CModal,
   CModalHeader,
   CModalTitle,
@@ -31,7 +30,7 @@ import CIcon from '@coreui/icons-react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { searchRestaurants, createRestaurant, updateRestaurant, deleteRestaurant } from '../services/api';
 import LoadingSpinner from './LoadingSpinner';
-import { debounce } from 'lodash';
+import SearchFilter from './SearchFilter';
 
 function Restaurant() {
   const [restaurants, setRestaurants] = useState([]);
@@ -40,21 +39,17 @@ function Restaurant() {
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [filters, setFilters] = useState({ query: '', cuisine: '', location: '', rating: '' });
   const [showModal, setShowModal] = useState(false);
   const [modalData, setModalData] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
-  useEffect(() => {
-    fetchRestaurants();
-  }, [page, searchQuery]);
-
-  const fetchRestaurants = async () => {
+  const fetchRestaurants = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, totalPages } = await searchRestaurants(page, 2, searchQuery || '');
+      const { data, totalPages } = await searchRestaurants(page, 2, filters.query, filters);
       setRestaurants(data);
       setTotalPages(totalPages);
     } catch (error) {
@@ -63,19 +58,16 @@ function Restaurant() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, filters]);
 
-  const debouncedFetchRestaurants = useCallback(
-    debounce((query) => {
-      setSearchQuery(query);
-      setPage(1);
-    }, 300),
-    []
-  );
+  useEffect(() => {
+    fetchRestaurants();
+  }, [fetchRestaurants]);
 
-  const handleSearchChange = (e) => {
-    debouncedFetchRestaurants(e.target.value);
-  };
+  const handleSearch = useCallback((query, filterValues) => {
+    setFilters({ query, ...filterValues });
+    setPage(1);
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -141,6 +133,7 @@ function Restaurant() {
         newRestaurant.images.forEach((file) => formData.append('images', file));
       }
 
+      console.log('Creating restaurant with data:', Object.fromEntries(formData));
       await createRestaurant(formData);
       setState({
         success: 'Restaurant added successfully',
@@ -151,10 +144,19 @@ function Restaurant() {
       fetchRestaurants();
       setTimeout(() => setSuccess(null), 5000);
     } catch (error) {
-      console.error('Error creating restaurant:', error);
-      const errorMessage = error.response?.data?.errors
-        ? error.response.data.errors.map((err) => err.msg).join(', ')
-        : error.response?.data?.error || 'Failed to create restaurant';
+      console.error('Error creating restaurant:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+      });
+      const errorMessage =
+        error.response?.status === 401
+          ? 'Please log in to create a restaurant'
+          : error.response?.status === 403
+          ? 'Invalid or expired session. Please log in again.'
+          : error.response?.data?.errors
+          ? error.response.data.errors.map((err) => err.msg).join(', ')
+          : error.response?.data?.error || 'Failed to create restaurant';
       setState({ error: errorMessage, formLoading: false });
     }
   };
@@ -179,6 +181,7 @@ function Restaurant() {
         selectedRestaurant.images.forEach((file) => formData.append('images', file));
       }
 
+      console.log('Updating restaurant with data:', Object.fromEntries(formData));
       await updateRestaurant(selectedRestaurant.id, formData);
       setState({
         success: 'Restaurant updated successfully',
@@ -189,10 +192,19 @@ function Restaurant() {
       fetchRestaurants();
       setTimeout(() => setSuccess(null), 5000);
     } catch (error) {
-      console.error('Error updating restaurant:', error);
-      const errorMessage = error.response?.data?.errors
-        ? error.response.data.errors.map((err) => err.msg).join(', ')
-        : error.response?.data?.error || 'Failed to update restaurant';
+      console.error('Error updating restaurant:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+      });
+      const errorMessage =
+        error.response?.status === 401
+          ? 'Please log in to update a restaurant'
+          : error.response?.status === 403
+          ? 'Invalid or expired session. Please log in again.'
+          : error.response?.data?.errors
+          ? error.response.data.errors.map((err) => err.msg).join(', ')
+          : error.response?.data?.error || 'Failed to update restaurant';
       setState({ error: errorMessage, formLoading: false });
     }
   };
@@ -205,8 +217,18 @@ function Restaurant() {
       fetchRestaurants();
       setTimeout(() => setSuccess(null), 5000);
     } catch (error) {
-      console.error('Error deleting restaurant:', error);
-      setState({ error: error.response?.data?.error || 'Failed to delete restaurant', loading: false });
+      console.error('Error deleting restaurant:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+      });
+      const errorMessage =
+        error.response?.status === 401
+          ? 'Please log in to delete a restaurant'
+          : error.response?.status === 403
+          ? 'Invalid or expired session. Please log in again.'
+          : error.response?.data?.error || 'Failed to delete restaurant';
+      setState({ error: errorMessage, loading: false });
     }
   };
 
@@ -227,8 +249,6 @@ function Restaurant() {
   };
 
   if (loading) return <LoadingSpinner />;
-
-  console.log('showModal:', showModal, 'modalData:', modalData, 'selectedRestaurant:', selectedRestaurant);
 
   return (
     <CCol xs={12}>
@@ -303,43 +323,7 @@ function Restaurant() {
             })}
           </p>
 
-          <div className="mb-4">
-            <CFormInput
-              type="text"
-              placeholder="Search by restaurant name..."
-              value={searchQuery}
-              onChange={handleSearchChange}
-            />
-          </div>
-
-          <div className="mb-4">
-            <div className="row g-2">
-              <div className="col-md-4">
-                <CFormSelect aria-label="All Cuisines">
-                  <option>All Cuisines</option>
-                </CFormSelect>
-              </div>
-              <div className="col-md-4">
-                <CFormSelect aria-label="All Locations">
-                  <option>All Locations</option>
-                </CFormSelect>
-              </div>
-              <div className="col-md-4">
-                <CFormSelect aria-label="All Ratings">
-                  <option>All Ratings</option>
-                </CFormSelect>
-              </div>
-            </div>
-          </div>
-
-          <div className="text-center mb-4">
-            <CButton
-              color="info"
-              onClick={() => openModal(restaurants.find((r) => r.name === 'Peshawar Tikka Haven'))}
-            >
-              View Details
-            </CButton>
-          </div>
+          <SearchFilter onSearch={handleSearch} />
 
           {loading ? (
             <CSpinner color="primary" />
@@ -358,7 +342,7 @@ function Restaurant() {
                 {restaurants.length === 0 ? (
                   <CTableRow>
                     <CTableDataCell colSpan="5" className="text-center">
-                      No restaurants found for "{searchQuery}"
+                      No restaurants found for "{filters.query}"
                     </CTableDataCell>
                   </CTableRow>
                 ) : (
@@ -618,4 +602,4 @@ function Restaurant() {
   );
 }
 
-export default Restaurant;
+export default React.memo(Restaurant);

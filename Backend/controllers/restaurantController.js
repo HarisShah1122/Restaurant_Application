@@ -22,7 +22,6 @@ const authenticate = (req, res, next) => {
   }
 };
 
-
 const storage = multer.diskStorage({
   destination: async (req, file, cb) => {
     const dir = 'public/uploads/images/';
@@ -42,10 +41,11 @@ const uploadMiddleware = multer({
     }
     cb(null, true);
   },
-  limits: { fileSize: 5 * 1024 * 1024, files: 30 }, 
+  limits: { fileSize: 5 * 1024 * 1024, files: 30 },
 }).array('images');
 
-module.exports = (app, upload) => {
+module.exports = (app) => {
+  // Create a new restaurant
   app.post('/restaurants', authenticate, uploadMiddleware, validationRestaurant, async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
@@ -66,60 +66,68 @@ module.exports = (app, upload) => {
       res.status(201).json(newFoodPlace);
     } catch (error) {
       await transaction.rollback();
-      res.status(400).json({ error: error.message });
+      res.status(400).json({ error: error.message || 'Failed to create restaurant' });
     }
   });
 
-  app.get('/all-restaurants', authenticate, async (req, res) => {
+  // Search restaurants with pagination and filters
+  app.get('/restaurants/search', authenticate, validateSearchQuery, validateFilters, async (req, res) => {
     try {
-      const foodPlaces = await FoodPlace.findAll();
-      res.json(foodPlaces);
-    } catch (error) {
-      res.status(400).json({ error: error.message });
-    }
-  });
-
-  app.get('/restaurants', authenticate, validateSearchQuery, validateFilters, async (req, res) => {
-    try {
-      const { query = '', cuisine, location, rating } = req.query;
-      const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 2;
-      const offset = (page - 1) * limit;
+      const { query = '', cuisine, location, rating, page = 1, limit = 2 } = req.query;
+      const offset = (parseInt(page) - 1) * parseInt(limit);
 
       let whereClause = {};
-      if (query) whereClause.name = { [Op.like]: `%${query}%` };
+      if (query) whereClause.name = { [Op.iLike]: `%${query}%` };
       if (cuisine) whereClause.cuisine = cuisine;
       if (location) whereClause.location = location;
       if (rating) whereClause.rating = { [Op.gte]: parseFloat(rating) };
 
       const { count, rows } = await FoodPlace.findAndCountAll({
         where: whereClause,
-        limit,
+        limit: parseInt(limit),
         offset,
         order: [['rating', 'DESC']],
       });
 
       res.json({
-        data: rows,
-        currentPage: page,
-        totalPages: Math.ceil(count / limit),
-        totalItems: count,
+        restaurants: rows,
+        totalPages: Math.ceil(count / parseInt(limit)),
       });
     } catch (error) {
-      res.status(400).json({ error: error.message });
+      res.status(400).json({ error: error.message || 'Failed to fetch restaurants' });
     }
   });
 
+  // Get suggestions for search
+  app.get('/restaurants/suggestions', authenticate, validateSearchQuery, async (req, res) => {
+    try {
+      const { query = '' } = req.query;
+      if (!query) return res.json({ suggestions: [] });
+
+      const suggestions = await FoodPlace.findAll({
+        attributes: ['name'],
+        where: { name: { [Op.iLike]: `%${query}%` } },
+        limit: 5,
+      });
+
+      res.json({ suggestions: suggestions.map((s) => s.name) });
+    } catch (error) {
+      res.status(400).json({ error: error.message || 'Failed to fetch suggestions' });
+    }
+  });
+
+  // Get a single restaurant by ID
   app.get('/restaurants/:id', authenticate, async (req, res) => {
     try {
       const foodPlace = await FoodPlace.findByPk(req.params.id);
-      if (!foodPlace) return res.status(404).json({ error: 'Food place not found' });
+      if (!foodPlace) return res.status(404).json({ error: 'Restaurant not found' });
       res.json(foodPlace);
     } catch (error) {
-      res.status(400).json({ error: error.message });
+      res.status(400).json({ error: error.message || 'Failed to fetch restaurant' });
     }
   });
 
+  // Update a restaurant
   app.put('/restaurants/:id', authenticate, uploadMiddleware, validationRestaurant, async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
@@ -130,12 +138,12 @@ module.exports = (app, upload) => {
       }
 
       const { name, cuisine, location, rating } = req.body;
-      const images = req.files ? req.files.map((file) => `/public/uploads/images/${file.filename}`) : req.body.images || [];
+      const images = req.files.length > 0 ? req.files.map((file) => `/public/uploads/images/${file.filename}`) : req.body.images || [];
 
       const foodPlace = await FoodPlace.findByPk(req.params.id, { transaction });
       if (!foodPlace) {
         await transaction.rollback();
-        return res.status(404).json({ error: 'Food place not found' });
+        return res.status(404).json({ error: 'Restaurant not found' });
       }
 
       await foodPlace.update({ name, cuisine, location, rating: parseFloat(rating), images }, { transaction });
@@ -143,38 +151,35 @@ module.exports = (app, upload) => {
       res.json(foodPlace);
     } catch (error) {
       await transaction.rollback();
-      res.status(400).json({ error: error.message });
+      res.status(400).json({ error: error.message || 'Failed to update restaurant' });
     }
   });
 
+  // Delete a restaurant
   app.delete('/restaurants/:id', authenticate, async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
       const foodPlace = await FoodPlace.findByPk(req.params.id, { transaction });
       if (!foodPlace) {
         await transaction.rollback();
-        return res.status(404).json({ error: 'Food place not found' });
+        return res.status(404).json({ error: 'Restaurant not found' });
       }
       await foodPlace.destroy({ transaction });
       await transaction.commit();
       res.status(204).send();
     } catch (error) {
       await transaction.rollback();
-      res.status(400).json({ error: error.message });
+      res.status(400).json({ error: error.message || 'Failed to delete restaurant' });
     }
   });
 
-  app.get('/suggestions', authenticate, validateSearchQuery, async (req, res) => {
+  // Get all restaurants (optional, kept for completeness)
+  app.get('/all-restaurants', authenticate, async (req, res) => {
     try {
-      const { query = '' } = req.query;
-      const suggestions = await FoodPlace.findAll({
-        attributes: ['name'],
-        where: { name: { [Op.like]: `%${query}%` } },
-        limit: 5,
-      });
-      res.json(suggestions.map((s) => s.name));
+      const foodPlaces = await FoodPlace.findAll();
+      res.json(foodPlaces);
     } catch (error) {
-      res.status(400).json({ error: error.message });
+      res.status(400).json({ error: error.message || 'Failed to fetch all restaurants' });
     }
   });
 };
