@@ -7,7 +7,7 @@ function SearchFilter({ onSearch, onFilter }) {
   const [filters, setFilters] = useState({ cuisine: '', location: '', rating: '' });
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  // Define mockRestaurants as a fallback (optional)
+
   const mockRestaurants = [
     'Karachi Biryani House',
     'Lahore Karahi Spot',
@@ -18,7 +18,7 @@ function SearchFilter({ onSearch, onFilter }) {
     const fetchSuggestions = async () => {
       if (query.length > 1) {
         const data = await getSuggestions(query);
-        setSuggestions(data || mockRestaurants); // Fallback to mock if API fails
+        setSuggestions(data || mockRestaurants); 
         setShowSuggestions(true);
       } else {
         setSuggestions([]);

@@ -6,8 +6,8 @@ const Users = require('../models/Users');
 const { validationUser, validationLogin } = require('../helpers/validation');
 const config = require('../config');
 
-module.exports.controller = (app) => {
-
+// module.exports.controller = (app) => {
+  module.exports = (app) => {
   app.post(
     '/login',
     validationLogin,

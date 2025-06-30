@@ -35,8 +35,8 @@ function App() {
       setRestaurants(data);
     } catch (err) {
       console.error(err);
-      // Fallback to initial data if API fails
-      setRestaurants([]); // Adjust based on your fallback strategy
+
+      setRestaurants([]);
     } finally {
       setLoading(false);
     }
@@ -67,7 +67,7 @@ function App() {
       setIsAuthenticated(false);
       localStorage.removeItem('token');
       setToken('');
-      // Do not redirect on / or /restaurant
+
       if (window.location.pathname !== '/' && window.location.pathname !== '/restaurant') {
         window.location.href = '/login';
       }
@@ -103,7 +103,7 @@ function App() {
                 setLoading={setLoading}
                 token={token}
                 setToken={setToken}
-                user={isAuthenticated ? { id: 1, name: 'User' } : null} // Mock user
+                user={isAuthenticated ? { id: 1, name: 'User' } : null}
                 initialRestaurants={restaurants}
                 setInitialRestaurants={setRestaurants}
                 handleSearch={handleSearch}

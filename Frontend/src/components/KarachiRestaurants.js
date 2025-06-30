@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import SearchFilter from './SearchFilter';
 import RestaurantList from './RestaurantList';
 import Toast from './Toast';
+import LoadingSpinner from './LoadingSpinner'; 
 
 function KarachiRestaurants() {
   const [restaurants, setRestaurants] = useState([]);
@@ -16,17 +17,40 @@ function KarachiRestaurants() {
   });
   const [toast, setToast] = useState({ show: false, message: '' });
   const [showModal, setShowModal] = useState(false);
+  const [loading, setLoading] = useState(false); 
   const cuisines = ['Biryani', 'Karahi', 'Tikka', 'Nihari', 'Pulao', 'Haleem', 'Chapli', 'Seekh', 'Qorma', 'Samosa'];
   const locations = ['Karachi', 'Clifton', 'Gulshan', 'Defence', 'Saddar'];
   const ratings = [3.0, 3.5, 4.0, 4.5, 5.0];
   const [token, setToken] = useState(localStorage.getItem('token') || '');
-  const [user, setUser] = useState(null);
+  // const [user, setUser] = useState(null); // Commented out as user is not needed
+  // const [isAuthenticated, setIsAuthenticated] = useState(false); // Commented out
 
   const navigate = useNavigate();
 
   useEffect(() => {
-    checkAuth();
-    fetchRestaurants();
+    // // Commented out verifyAuth to skip authentication
+    // const verifyAuth = async () => {
+    //   setLoading(true);
+    //   try {
+    //     const response = await axios.get('http://localhost:8081/api/check-auth', {
+    //       headers: { Authorization: `Bearer ${token}` },
+    //     });
+    //     setUser(response.data.user);
+    //     setIsAuthenticated(true);
+    //   } catch (error) {
+    //     console.error('Authentication failed:', error.message);
+    //     setUser(null);
+    //     localStorage.removeItem('token');
+    //     setToken('');
+    //     setIsAuthenticated(false);
+    //     navigate('/login');
+    //   } finally {
+    //     setLoading(false);
+    //   }
+    // };
+    // verifyAuth();
+
+    fetchRestaurants(); // Fetch restaurants directly without auth check
   }, []);
 
   const fetchRestaurants = async (query = '', filters = {}) => {
@@ -37,7 +61,7 @@ function KarachiRestaurants() {
       url.search = params.toString();
 
       const response = await axios.get(url.toString(), {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` }, 
       });
       setRestaurants(response.data.data);
     } catch (error) {
@@ -47,79 +71,84 @@ function KarachiRestaurants() {
     }
   };
 
-  const checkAuth = async () => {
-    try {
-      const response = await axios.get('http://localhost:8081/api/check-auth', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setUser(response.data.user);
-    } catch (error) {
-      setUser(null);
-      localStorage.removeItem('token');
-      setToken('');
-      navigate('/login');
-    }
-  };
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleImageChange = (index, value) => {
     const newImages = [...formData.images];
     newImages[index] = value;
-    setFormData(prev => ({ ...prev, images: newImages }));
+    setFormData((prev) => ({ ...prev, images: newImages }));
   };
 
   const addImageField = () => {
     if (formData.images.length < 30) {
-      setFormData(prev => ({ ...prev, images: [...prev.images, ''] }));
+      setFormData((prev) => ({ ...prev, images: [...prev.images, ''] }));
     }
   };
 
   const removeImageField = (index) => {
     if (formData.images.length > 1) {
       const newImages = formData.images.filter((_, i) => i !== index);
-      setFormData(prev => ({ ...prev, images: newImages }));
+      setFormData((prev) => ({ ...prev, images: newImages }));
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!user) return navigate('/login');
+    // Removed user check to allow submission without authentication
+    // if (!user) {
+    //   navigate('/login');
+    //   return;
+    // }
     try {
       const payload = {
         ...formData,
-        images: formData.images.filter(img => img.trim() !== ''),
+        images: formData.images.filter((img) => img.trim() !== ''),
       };
       const response = await axios.post('http://localhost:8081/restaurants', payload, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` }, // Keep token, handle errors if token is invalid
       });
-      setRestaurants(prev => [...prev, response.data]);
+      setRestaurants((prev) => [...prev, response.data]);
       setToast({ show: true, message: 'Restaurant added successfully!' });
       setFormData({ name: '', cuisine: '', location: 'Karachi', rating: '', images: [''] });
       setShowModal(false);
     } catch (error) {
-      setToast({ show: true, message: `Error adding restaurant: ${error.response?.data?.error || error.message}` });
+      setToast({
+        show: true,
+        message: `Error adding restaurant: ${error.response?.data?.error || error.message}`,
+      });
     }
   };
 
   const handleSearch = (query, filters) => {
+    // Removed isAuthenticated check to allow search without auth
     fetchRestaurants(query, filters);
   };
 
   if (loading) return <LoadingSpinner />;
 
+  // Removed isAuthenticated check to allow rendering without auth
+  // if (!isAuthenticated) {
+  //   return null;
+  // }
+
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6 text-center">Karachi Restaurants</h1>
       <div className="text-end mb-3">
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>Add Restaurant</button>
+        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+          Add Restaurant
+        </button>
       </div>
       <SearchFilter onSearch={handleSearch} onFilter={handleSearch} />
       <RestaurantList restaurants={restaurants} />
-      <Toast show={toast.show} message={toast.message} onClose={() => setToast({ show: false, message: '' })} />
+      <Toast
+        show={toast.show}
+        message={toast.message}
+        onClose={() => setToast({ show: false, message: '' })}
+      />
       {showModal && (
         <div className="modal" tabIndex="-1" style={{ display: 'block' }}>
           <div className="modal-dialog">
@@ -153,7 +182,11 @@ function KarachiRestaurants() {
                         required
                       >
                         <option value="">Select Cuisine</option>
-                        {cuisines.map(cuisine => <option key={cuisine} value={cuisine}>{cuisine}</option>)}
+                        {cuisines.map((cuisine) => (
+                          <option key={cuisine} value={cuisine}>
+                            {cuisine}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -166,7 +199,11 @@ function KarachiRestaurants() {
                         required
                       >
                         <option value="">Select Location</option>
-                        {locations.map(location => <option key={location} value={location}>{location}</option>)}
+                        {locations.map((location) => (
+                          <option key={location} value={location}>
+                            {location}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -179,7 +216,11 @@ function KarachiRestaurants() {
                         required
                       >
                         <option value="">Select Rating</option>
-                        {ratings.map(rating => <option key={rating} value={rating}>{rating}</option>)}
+                        {ratings.map((rating) => (
+                          <option key={rating} value={rating}>
+                            {rating}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>
@@ -217,8 +258,16 @@ function KarachiRestaurants() {
                     )}
                   </div>
                   <div className="modal-footer mt-4">
-                    <button type="submit" className="btn btn-primary">Save Restaurant</button>
-                    <button type="button" className="btn btn-secondary ms-2" onClick={() => setShowModal(false)}>Close</button>
+                    <button type="submit" className="btn btn-primary">
+                      Save Restaurant
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary ms-2"
+                      onClick={() => setShowModal(false)}
+                    >
+                      Close
+                    </button>
                   </div>
                 </form>
               </div>

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 
@@ -30,28 +31,18 @@ function Navbar({ isAuthenticated, setIsAuthenticated }) {
             {!isAuthenticated && (
               <>
                 <li className="nav-item">
-                  <Link className="nav-link" to="/login" data-bs-toggle="tooltip" title="Sign In">
-                    Login <i className="bi bi-box-arrow-in-right"></i>
-                  </Link>
+                  <Link className="nav-link" to="/login">Login <i className="bi bi-box-arrow-in-right"></i></Link>
                 </li>
                 <li className="nav-item">
-                  <Link className="nav-link" to="/register" data-bs-toggle="tooltip" title="Create Account">
-                    Register <i className="bi bi-person-plus"></i>
-                  </Link>
+                  <Link className="nav-link" to="/register">Register <i className="bi bi-person-plus"></i></Link>
                 </li>
               </>
             )}
             {isAuthenticated && (
               <li className="nav-item">
-                <Link
-                  className="nav-link"
-                  to="/login"
-                  onClick={handleLogout}
-                  data-bs-toggle="tooltip"
-                  title="Sign Out"
-                >
+                <button className="nav-link btn btn-link" onClick={handleLogout}>
                   Logout <i className="bi bi-box-arrow-right"></i>
-                </Link>
+                </button>
               </li>
             )}
           </ul>

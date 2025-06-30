@@ -18,11 +18,12 @@ const RestaurantCard = ({ restaurant }) => {
         <div className="card-text">
           <strong>Reviews:</strong>
           <ul>
-            {restaurant.reviews && restaurant.reviews.map((review, index) => (
-              <li key={index}>
-                {review.user}: {review.rating} / 5 - "{review.comment}"
-              </li>
-            ))}
+            {restaurant.reviews &&
+              restaurant.reviews.map((review, index) => (
+                <li key={index}>
+                  {review.user}: {review.rating} / 5 - "{review.comment}"
+                </li>
+              ))}
           </ul>
         </div>
         <div className="d-flex flex-wrap">
@@ -32,8 +33,8 @@ const RestaurantCard = ({ restaurant }) => {
               src={image}
               alt={`${restaurant.name} Image ${index + 1}`}
               className="img-thumbnail m-1"
-              style={{ width: '200px', height: '200px', objectFit: 'cover' }}
-              onError={(e) => (e.target.src = '/images/placeholder.jpg')}
+              style={{ width: '100px', height: '100px', objectFit: 'cover' }}
+              onError={(e) => (e.target.src = 'https://www.spiceandcolour.com/wp-content/uploads/2020/06/receta-presentacion-biryani-de-pollo-01.jpg')}
             />
           ))}
         </div>

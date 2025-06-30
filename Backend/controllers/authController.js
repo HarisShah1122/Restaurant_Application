@@ -6,8 +6,7 @@ const Users = require('../models/Users');
 const { validationUser, validationLogin } = require('../helpers/validation');
 const config = require('../config');
 
-module.exports.controller = (app) => {
- 
+module.exports = (app) => {
   app.post('/signup', validationUser, async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -37,14 +36,13 @@ module.exports.controller = (app) => {
         user: { id: user.id, email: user.email, role: user.role },
       });
     } catch (error) {
-      console.error(error);
+      console.error('Signup error:', error);
       if (error.name === 'SequelizeUniqueConstraintError') {
         return res.status(400).json({ error: 'Email already in use.' });
       }
-      return res.status(500).json({ error: 'User registration failed: ' + error.message });
+      return res.status(500).json({ error: `User registration failed: ${error.message}` });
     }
   });
-
 
   app.post('/login', validationLogin, async (req, res) => {
     const errors = validationResult(req);
@@ -71,8 +69,8 @@ module.exports.controller = (app) => {
         user: { id: user.id, email: user.email, role: user.role },
       });
     } catch (error) {
-      console.error(error);
-      return res.status(500).json({ error: 'Login failed: ' + error.message });
+      console.error('Login error:', error);
+      return res.status(500).json({ error: `Login failed: ${error.message}` });
     }
   });
 };

@@ -1,4 +1,4 @@
-const { body } = require('express-validator');
+const { body, query } = require('express-validator');
 
 const validationUser = [
   body('firstname')
@@ -57,33 +57,36 @@ const validationRestaurant = [
     .withMessage('Rating is required')
     .isFloat({ min: 0, max: 5 })
     .withMessage('Rating must be between 0 and 5'),
+  body('images')
+    .optional()
+    .isArray()
+    .withMessage('Images must be an array'),
 ];
 
-const validateSearchQuery = (req, res, next) => {
-  try {
-    const query = req.query.query || '';
-    if (typeof query !== 'string' || query.length > 100) {
-      throw new Error('Query must be a string and less than 100 characters');
-    }
-    req.query.query = query.trim();
-    next();
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-};
+const validateSearchQuery = [
+  query('query')
+    .optional()
+    .isString()
+    .withMessage('Query must be a string')
+    .isLength({ max: 100 })
+    .withMessage('Query must be less than 100 characters')
+    .trim(),
+];
 
-const validateFilters = (req, res, next) => {
-  try {
-    const { cuisine, location, rating } = req.query;
-    if (cuisine && typeof cuisine !== 'string') throw new Error('Cuisine must be a string');
-    if (location && typeof location !== 'string') throw new Error('Location must be a string');
-    if (rating && (isNaN(rating) || rating < 0 || rating > 5)) throw new Error('Rating must be between 0 and 5');
-    req.query.filters = { cuisine, location, rating };
-    next();
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-};
+const validateFilters = [
+  query('cuisine')
+    .optional()
+    .isString()
+    .withMessage('Cuisine must be a string'),
+  query('location')
+    .optional()
+    .isString()
+    .withMessage('Location must be a string'),
+  query('rating')
+    .optional()
+    .isFloat({ min: 0, max: 5 })
+    .withMessage('Rating must be between 0 and 5'),
+];
 
 module.exports = {
   validationUser,

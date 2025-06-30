@@ -3,6 +3,9 @@ const { validationResult } = require('express-validator');
 const { validationRestaurant, validateSearchQuery, validateFilters } = require('../helpers/validation');
 const { Op } = require('sequelize');
 const jwt = require('jsonwebtoken');
+const fs = require('fs').promises;
+const path = require('path');
+const multer = require('multer');
 
 const config = { jwtSecret: '8Kj9mPq2v' };
 
@@ -19,8 +22,31 @@ const authenticate = (req, res, next) => {
   }
 };
 
-module.exports.controller = (app) => {
-  app.post('/restaurants', authenticate, validationRestaurant, async (req, res) => {
+
+const storage = multer.diskStorage({
+  destination: async (req, file, cb) => {
+    const dir = 'public/uploads/images/';
+    await fs.mkdir(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}_${file.originalname}`);
+  },
+});
+
+const uploadMiddleware = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.match(/image\/(png|jpeg|jpg)/)) {
+      return cb(new Error('Only PNG and JPEG images are allowed'));
+    }
+    cb(null, true);
+  },
+  limits: { fileSize: 5 * 1024 * 1024, files: 30 }, 
+}).array('images');
+
+module.exports = (app, upload) => {
+  app.post('/restaurants', authenticate, uploadMiddleware, validationRestaurant, async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
       const errors = validationResult(req);
@@ -28,9 +54,12 @@ module.exports.controller = (app) => {
         await transaction.rollback();
         return res.status(400).json({ errors: errors.array() });
       }
-      const { name, cuisine, location, rating, images } = req.body;
+
+      const { name, cuisine, location, rating } = req.body;
+      const images = req.files ? req.files.map((file) => `/public/uploads/images/${file.filename}`) : [];
+
       const newFoodPlace = await FoodPlace.create(
-        { name, cuisine, location, rating, images },
+        { name, cuisine, location, rating: parseFloat(rating), images },
         { transaction }
       );
       await transaction.commit();
@@ -54,27 +83,27 @@ module.exports.controller = (app) => {
     try {
       const { query = '', cuisine, location, rating } = req.query;
       const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 10;
+      const limit = parseInt(req.query.limit) || 2;
       const offset = (page - 1) * limit;
 
       let whereClause = {};
       if (query) whereClause.name = { [Op.like]: `%${query}%` };
       if (cuisine) whereClause.cuisine = cuisine;
       if (location) whereClause.location = location;
-      if (rating) whereClause.rating = { [Op.gte]: rating };
+      if (rating) whereClause.rating = { [Op.gte]: parseFloat(rating) };
 
       const { count, rows } = await FoodPlace.findAndCountAll({
         where: whereClause,
         limit,
         offset,
-        order: [['rating', 'DESC']]
+        order: [['rating', 'DESC']],
       });
 
       res.json({
         data: rows,
         currentPage: page,
         totalPages: Math.ceil(count / limit),
-        totalItems: count
+        totalItems: count,
       });
     } catch (error) {
       res.status(400).json({ error: error.message });
@@ -91,7 +120,7 @@ module.exports.controller = (app) => {
     }
   });
 
-  app.put('/restaurants/:id', authenticate, validationRestaurant, async (req, res) => {
+  app.put('/restaurants/:id', authenticate, uploadMiddleware, validationRestaurant, async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
       const errors = validationResult(req);
@@ -99,13 +128,17 @@ module.exports.controller = (app) => {
         await transaction.rollback();
         return res.status(400).json({ errors: errors.array() });
       }
-      const { name, cuisine, location, rating, images } = req.body;
+
+      const { name, cuisine, location, rating } = req.body;
+      const images = req.files ? req.files.map((file) => `/public/uploads/images/${file.filename}`) : req.body.images || [];
+
       const foodPlace = await FoodPlace.findByPk(req.params.id, { transaction });
       if (!foodPlace) {
         await transaction.rollback();
         return res.status(404).json({ error: 'Food place not found' });
       }
-      await foodPlace.update({ name, cuisine, location, rating, images }, { transaction });
+
+      await foodPlace.update({ name, cuisine, location, rating: parseFloat(rating), images }, { transaction });
       await transaction.commit();
       res.json(foodPlace);
     } catch (error) {
@@ -137,9 +170,9 @@ module.exports.controller = (app) => {
       const suggestions = await FoodPlace.findAll({
         attributes: ['name'],
         where: { name: { [Op.like]: `%${query}%` } },
-        limit: 5
+        limit: 5,
       });
-      res.json(suggestions.map(s => s.name));
+      res.json(suggestions.map((s) => s.name));
     } catch (error) {
       res.status(400).json({ error: error.message });
     }
