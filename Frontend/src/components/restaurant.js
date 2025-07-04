@@ -256,10 +256,18 @@ function Restaurant() {
         <CCardHeader>
           <div className="d-flex justify-content-between align-items-center">
             <strong>Restaurants</strong>
-            <CButton color="primary" onClick={() => openModal(null)}>
-              <CIcon icon={cilPlus} className="me-2" />
-              Add Restaurant
-            </CButton>
+                      <CButton
+            color="primary"
+            onClick={() => openModal(null)}
+            style={{
+              padding: '0.25rem 0.5rem', 
+              fontSize: '0.8rem', 
+              lineHeight: '1.2',
+            }}
+          >
+            <CIcon icon={cilPlus} className="me-1" style={{ width: '16px', height: '16px' }} />
+            Add Restaurant
+          </CButton>
           </div>
           {success && (
             <CAlert

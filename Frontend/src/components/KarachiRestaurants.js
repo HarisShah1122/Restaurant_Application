@@ -153,9 +153,17 @@ function KarachiRestaurants() {
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6 text-center">Karachi Restaurants</h1>
       <div className="text-end mb-3">
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-          Add Restaurant
-        </button>
+      <button
+        className="btn btn-primary"
+        onClick={() => setShowModal(true)}
+        style={{
+          padding: '0.25rem 0.5rem', 
+          fontSize: '0.8rem', 
+          lineHeight: '1.2', 
+        }}
+      >
+        Add Restaurant
+      </button>
       </div>
       <SearchFilter onSearch={handleSearch} onFilter={handleSearch} />
       <RestaurantList restaurants={restaurants} />
