@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import SearchFilter from './SearchFilter';
 import RestaurantList from './RestaurantList';
+import HomePage from './HomePage';
 import Toast from './Toast';
 import LoadingSpinner from './LoadingSpinner';
 
@@ -25,6 +26,13 @@ function KarachiRestaurants() {
   const ratings = [3.0, 3.5, 4.0, 4.5, 5.0];
   const [token, setToken] = useState(localStorage.getItem('token') || '');
   const navigate = useNavigate();
+  const [time, setTime] = useState(new Date());
+
+  // Update time every second
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (!token) {
@@ -38,7 +46,7 @@ function KarachiRestaurants() {
   const fetchRestaurants = async (query = '', filters = {}) => {
     setLoading(true);
     try {
-      console.log('Fetching restaurants with token:', token); // Debug log
+      console.log('Fetching restaurants with token:', token);
       if (!token) {
         throw new Error('No authentication token found');
       }
@@ -50,7 +58,25 @@ function KarachiRestaurants() {
       const response = await axios.get(url.toString(), {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setRestaurants(response.data.restaurants);
+
+      // Normalize restaurant data
+      const normalizedRestaurants = response.data.restaurants.map((restaurant) => {
+        const normalized = {
+          ...restaurant,
+          images: Array.isArray(restaurant.images) ? restaurant.images : [],
+          _id: restaurant._id || restaurant.id || Math.random().toString(36).substring(2),
+          name: restaurant.name || 'Unknown',
+          cuisine: restaurant.cuisine || 'N/A',
+          location: restaurant.location || 'N/A',
+          rating: restaurant.rating || 0,
+        };
+        if (!Array.isArray(restaurant.images)) {
+          console.warn(`Invalid images field for restaurant ${restaurant.name || 'Unknown'} (ID: ${restaurant._id || restaurant.id}):`, restaurant.images);
+        }
+        return normalized;
+      });
+      console.log('Normalized restaurants:', normalizedRestaurants);
+      setRestaurants(normalizedRestaurants);
     } catch (error) {
       console.error('Error fetching restaurants:', {
         message: error.message,
@@ -107,14 +133,32 @@ function KarachiRestaurants() {
       payload.append('rating', parseFloat(formData.rating));
       formData.images.forEach((file) => payload.append('images', file));
 
-      console.log('Submitting restaurant with data:', Object.fromEntries(payload));
+      console.log('Submitting restaurant with data:', {
+        name: formData.name,
+        cuisine: formData.cuisine,
+        location: formData.location,
+        rating: parseFloat(formData.rating),
+        images: formData.images.map((file) => file.name),
+      });
       const response = await axios.post('http://localhost:8081/restaurants', payload, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data',
         },
       });
-      setRestaurants((prev) => [...prev, response.data]);
+
+      // Normalize the new restaurant data
+      const newRestaurant = {
+        ...response.data,
+        images: Array.isArray(response.data.images) ? response.data.images : [],
+        _id: response.data._id || response.data.id || Math.random().toString(36).substring(2),
+        name: response.data.name || 'Unknown',
+        cuisine: response.data.cuisine || 'N/A',
+        location: response.data.location || 'N/A',
+        rating: response.data.rating || 0,
+      };
+      console.log('New restaurant added:', newRestaurant);
+      setRestaurants((prev) => [...prev, newRestaurant]);
       setToast({ show: true, message: 'Restaurant added successfully!' });
       setFormData({ name: '', cuisine: '', location: 'Karachi', rating: '', images: [] });
       setShowModal(false);
@@ -147,25 +191,28 @@ function KarachiRestaurants() {
     fetchRestaurants(query, filters);
   };
 
+  const handleFilter = (query, filters) => {
+    fetchRestaurants(query, filters);
+  };
+
   if (loading) return <LoadingSpinner />;
 
   return (
     <div className="container mx-auto p-4">
+      <HomePage
+        time={time}
+        handleSearch={handleSearch}
+        handleFilter={handleFilter}
+        restaurants={restaurants}
+        loading={loading}
+      />
       <h1 className="text-3xl font-bold mb-6 text-center">Karachi Restaurants</h1>
       <div className="text-end mb-3">
-      <button
-        className="btn btn-primary"
-        onClick={() => setShowModal(true)}
-        style={{
-          padding: '0.25rem 0.5rem', 
-          fontSize: '0.8rem', 
-          lineHeight: '1.2', 
-        }}
-      >
-        Add Restaurant
-      </button>
+        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+          Add Restaurant
+        </button>
       </div>
-      <SearchFilter onSearch={handleSearch} onFilter={handleSearch} />
+      <SearchFilter onSearch={handleSearch} onFilter={handleFilter} />
       <RestaurantList restaurants={restaurants} />
       <Toast
         show={toast.show}
