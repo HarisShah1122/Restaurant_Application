@@ -53,18 +53,27 @@ function KarachiRestaurants() {
 
       // Normalize restaurant data
       const restaurantData = response.data.data || response.data.restaurants || [];
+      const validImageRegex = /^[0-9a-zA-Z._-]+\.(jpg|jpeg|png)$/;
       const normalizedRestaurants = restaurantData.map((restaurant) => {
-        // Handle invalid images field (string or non-array)
         let normalizedImages = [];
         if (Array.isArray(restaurant.images)) {
-          normalizedImages = restaurant.images.map((img) =>
-            img.replace(/^\/?(public\/images\/|uploads\/|uploads\/images\/)/, 'public/uploads/images/')
-          );
+          normalizedImages = restaurant.images
+            .map((img) => img.replace(/^\/?(public\/images\/|uploads\/|uploads\/images\/|Ipublicluploads\/)/, 'public/uploads/images/'))
+            .filter((img) => {
+              const isValid = validImageRegex.test(img.split('/').pop());
+              if (!isValid) {
+                console.warn(`Invalid image filename for ${restaurant.name || 'Unknown'} (ID: ${restaurant._id || restaurant.id}):`, img);
+              }
+              return isValid;
+            });
         } else if (typeof restaurant.images === 'string') {
           console.warn(`Converting string images to array for restaurant ${restaurant.name || 'Unknown'} (ID: ${restaurant._id || restaurant.id}):`, restaurant.images);
-          normalizedImages = [
-            restaurant.images.replace(/^\/?(public\/images\/|uploads\/|uploads\/images\/)/, 'public/uploads/images/')
-          ];
+          const normalizedPath = restaurant.images.replace(/^\/?(public\/images\/|uploads\/|uploads\/images\/|Ipublicluploads\/)/, 'public/uploads/images/');
+          if (validImageRegex.test(normalizedPath.split('/').pop())) {
+            normalizedImages = [normalizedPath];
+          } else {
+            console.warn(`Invalid image filename for ${restaurant.name || 'Unknown'} (ID: ${restaurant._id || restaurant.id}):`, normalizedPath);
+          }
         } else {
           console.warn(`Invalid images field for restaurant ${restaurant.name || 'Unknown'} (ID: ${restaurant._id || restaurant.id}):`, restaurant.images);
         }
@@ -74,9 +83,9 @@ function KarachiRestaurants() {
           images: normalizedImages,
           _id: restaurant._id || restaurant.id || Math.random().toString(36).substring(2),
           id: restaurant._id || restaurant.id || Math.random().toString(36).substring(2),
-          name: restaurant.name || 'Unknown',
-          cuisine: restaurant.cuisine || 'N/A',
-          location: restaurant.location || 'N/A',
+          name: (restaurant.name || 'Unknown').trim(),
+          cuisine: (restaurant.cuisine || 'N/A').trim(),
+          location: (restaurant.location || 'N/A').trim().replace('chken', 'chicken'),
           rating: restaurant.rating || 0,
         };
         return normalized;
@@ -105,7 +114,7 @@ function KarachiRestaurants() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value.trim() }));
     setFormError(null);
   };
 
@@ -149,16 +158,19 @@ function KarachiRestaurants() {
       });
 
       // Normalize the new restaurant data
+      const validImageRegex = /^[0-9a-zA-Z._-]+\.(jpg|jpeg|png)$/;
       const newRestaurant = {
         ...response.data,
         images: Array.isArray(response.data.images)
-          ? response.data.images.map((img) => img.replace(/^\/?(public\/images\/|uploads\/|uploads\/images\/)/, 'public/uploads/images/'))
+          ? response.data.images
+              .map((img) => img.replace(/^\/?(public\/images\/|uploads\/|uploads\/images\/|Ipublicluploads\/)/, 'public/uploads/images/'))
+              .filter((img) => validImageRegex.test(img.split('/').pop()))
           : [],
         _id: response.data._id || response.data.id || Math.random().toString(36).substring(2),
         id: response.data._id || response.data.id || Math.random().toString(36).substring(2),
-        name: response.data.name || 'Unknown',
-        cuisine: response.data.cuisine || 'N/A',
-        location: response.data.location || 'N/A',
+        name: (response.data.name || 'Unknown').trim(),
+        cuisine: (response.data.cuisine || 'N/A').trim(),
+        location: (response.data.location || 'N/A').trim().replace('chken', 'chicken'),
         rating: response.data.rating || 0,
       };
       console.log('New restaurant added:', newRestaurant);

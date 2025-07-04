@@ -52,15 +52,25 @@ function HomePage() {
       const normalizedRestaurants = restaurantData.map((restaurant) => {
         // Handle invalid images field (string or non-array)
         let normalizedImages = [];
+        const validImageRegex = /^[0-9a-zA-Z._-]+\.(jpg|jpeg|png)$/; // Validate filename format
         if (Array.isArray(restaurant.images)) {
-          normalizedImages = restaurant.images.map((img) =>
-            img.replace(/^\/?(public\/images\/|uploads\/|uploads\/images\/)/, 'public/uploads/images/')
-          );
+          normalizedImages = restaurant.images
+            .map((img) => img.replace(/^\/?(public\/images\/|uploads\/|uploads\/images\/|Ipublicluploads\/)/, 'public/uploads/images/'))
+            .filter((img) => {
+              const isValid = validImageRegex.test(img.split('/').pop());
+              if (!isValid) {
+                console.warn(`Invalid image filename for ${restaurant.name || 'Unknown'} (ID: ${restaurant._id || restaurant.id}):`, img);
+              }
+              return isValid;
+            });
         } else if (typeof restaurant.images === 'string') {
           console.warn(`Converting string images to array for restaurant ${restaurant.name || 'Unknown'} (ID: ${restaurant._id || restaurant.id}):`, restaurant.images);
-          normalizedImages = [
-            restaurant.images.replace(/^\/?(public\/images\/|uploads\/|uploads\/images\/)/, 'public/uploads/images/')
-          ];
+          const normalizedPath = restaurant.images.replace(/^\/?(public\/images\/|uploads\/|uploads\/images\/|Ipublicluploads\/)/, 'public/uploads/images/');
+          if (validImageRegex.test(normalizedPath.split('/').pop())) {
+            normalizedImages = [normalizedPath];
+          } else {
+            console.warn(`Invalid image filename for ${restaurant.name || 'Unknown'} (ID: ${restaurant._id || restaurant.id}):`, normalizedPath);
+          }
         } else {
           console.warn(`Invalid images field for restaurant ${restaurant.name || 'Unknown'} (ID: ${restaurant._id || restaurant.id}):`, restaurant.images);
         }
@@ -70,9 +80,9 @@ function HomePage() {
           images: normalizedImages,
           _id: restaurant._id || restaurant.id || Math.random().toString(36).substring(2),
           id: restaurant._id || restaurant.id || Math.random().toString(36).substring(2),
-          name: restaurant.name || 'Unknown',
-          cuisine: restaurant.cuisine || 'N/A',
-          location: restaurant.location || 'N/A',
+          name: (restaurant.name || 'Unknown').trim(), // Trim whitespace
+          cuisine: (restaurant.cuisine || 'N/A').trim(),
+          location: (restaurant.location || 'N/A').trim().replace('chken', 'chicken'), // Fix typos
           rating: restaurant.rating || 0,
         };
         return normalized;
@@ -145,7 +155,7 @@ function HomePage() {
                               alt={`${restaurant.name || 'Restaurant'} - Image ${index + 1}`}
                               style={{ height: '200px', objectFit: 'cover' }}
                               onError={(e) => {
-                                console.warn(`Failed to load image: http://localhost:8081/${image} for ${restaurant.name || 'Unknown'}`);
+                                console.warn(`Failed to load image: http://localhost:8081/${image} for ${restaurant.name || 'Unknown'} (ID: ${restaurant._id || restaurant.id})`);
                                 e.target.src = '/images/placeholder.png';
                               }}
                             />
