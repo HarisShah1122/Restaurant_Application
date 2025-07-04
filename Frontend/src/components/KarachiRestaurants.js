@@ -58,12 +58,12 @@ function KarachiRestaurants() {
         let normalizedImages = [];
         if (Array.isArray(restaurant.images)) {
           normalizedImages = restaurant.images.map((img) =>
-            img.replace(/^\/public\/Uploads\/images\//, 'uploads/')
+            img.replace(/^\/?(public\/images\/|uploads\/|uploads\/images\/)/, 'public/uploads/images/')
           );
         } else if (typeof restaurant.images === 'string') {
           console.warn(`Converting string images to array for restaurant ${restaurant.name || 'Unknown'} (ID: ${restaurant._id || restaurant.id}):`, restaurant.images);
           normalizedImages = [
-            restaurant.images.replace(/^\/public\/Uploads\/images\//, 'uploads/')
+            restaurant.images.replace(/^\/?(public\/images\/|uploads\/|uploads\/images\/)/, 'public/uploads/images/')
           ];
         } else {
           console.warn(`Invalid images field for restaurant ${restaurant.name || 'Unknown'} (ID: ${restaurant._id || restaurant.id}):`, restaurant.images);
@@ -151,7 +151,9 @@ function KarachiRestaurants() {
       // Normalize the new restaurant data
       const newRestaurant = {
         ...response.data,
-        images: Array.isArray(response.data.images) ? response.data.images : [],
+        images: Array.isArray(response.data.images)
+          ? response.data.images.map((img) => img.replace(/^\/?(public\/images\/|uploads\/|uploads\/images\/)/, 'public/uploads/images/'))
+          : [],
         _id: response.data._id || response.data.id || Math.random().toString(36).substring(2),
         id: response.data._id || response.data.id || Math.random().toString(36).substring(2),
         name: response.data.name || 'Unknown',

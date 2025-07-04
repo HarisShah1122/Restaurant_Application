@@ -54,12 +54,12 @@ function HomePage() {
         let normalizedImages = [];
         if (Array.isArray(restaurant.images)) {
           normalizedImages = restaurant.images.map((img) =>
-            img.replace(/^\/public\/uploads\/images\//, 'uploads/')
+            img.replace(/^\/?(public\/images\/|uploads\/|uploads\/images\/)/, 'public/uploads/images/')
           );
         } else if (typeof restaurant.images === 'string') {
           console.warn(`Converting string images to array for restaurant ${restaurant.name || 'Unknown'} (ID: ${restaurant._id || restaurant.id}):`, restaurant.images);
           normalizedImages = [
-            restaurant.images.replace(/^\/public\/uploads\/images\//, 'uploads/')
+            restaurant.images.replace(/^\/?(public\/images\/|uploads\/|uploads\/images\/)/, 'public/uploads/images/')
           ];
         } else {
           console.warn(`Invalid images field for restaurant ${restaurant.name || 'Unknown'} (ID: ${restaurant._id || restaurant.id}):`, restaurant.images);
@@ -131,29 +131,61 @@ function HomePage() {
           {restaurants.length === 0 ? (
             <p className="text-center">No restaurants found.</p>
           ) : (
-            restaurants.map((restaurant) => {
-              const imageSrc = restaurant.images.length > 0
-                ? `http://localhost:8081/${restaurant.images[0]}`
-                : '/images/placeholder.png';
-
-              return (
-                <div className="col-md-4 mb-3" key={restaurant._id || restaurant.id}>
-                  <div className="card h-100">
+            restaurants.map((restaurant) => (
+              <div className="col-md-4 mb-3" key={restaurant._id || restaurant.id}>
+                <div className="card h-100">
+                  {restaurant.images.length > 0 ? (
+                    <div id={`carousel-${restaurant._id || restaurant.id}`} className="carousel slide" data-bs-ride="carousel">
+                      <div className="carousel-inner">
+                        {restaurant.images.map((image, index) => (
+                          <div key={index} className={`carousel-item ${index === 0 ? 'active' : ''}`}>
+                            <img
+                              src={`http://localhost:8081/${image}`}
+                              className="d-block w-100"
+                              alt={`${restaurant.name || 'Restaurant'} - Image ${index + 1}`}
+                              style={{ height: '200px', objectFit: 'cover' }}
+                              onError={(e) => {
+                                console.warn(`Failed to load image: http://localhost:8081/${image} for ${restaurant.name || 'Unknown'}`);
+                                e.target.src = '/images/placeholder.png';
+                              }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        className="carousel-control-prev"
+                        type="button"
+                        data-bs-target={`#carousel-${restaurant._id || restaurant.id}`}
+                        data-bs-slide="prev"
+                      >
+                        <span className="carousel-control-prev-icon" aria-hidden="true"></span>
+                        <span className="visually-hidden">Previous</span>
+                      </button>
+                      <button
+                        className="carousel-control-next"
+                        type="button"
+                        data-bs-target={`#carousel-${restaurant._id || restaurant.id}`}
+                        data-bs-slide="next"
+                      >
+                        <span className="carousel-control-next-icon" aria-hidden="true"></span>
+                        <span className="visually-hidden">Next</span>
+                      </button>
+                    </div>
+                  ) : (
                     <img
-                      src={imageSrc}
+                      src="/images/placeholder.png"
                       className="card-img-top"
                       alt={restaurant.name || 'Restaurant'}
                       style={{ height: '200px', objectFit: 'cover' }}
-                      onError={(e) => (e.target.src = '/images/placeholder.png')}
                     />
-                    <div className="card-body">
-                      <h5 className="card-title">{restaurant.name || 'Unknown'}</h5>
-                      <p className="card-text">{restaurant.cuisine || 'N/A'}</p>
-                    </div>
+                  )}
+                  <div className="card-body">
+                    <h5 className="card-title">{restaurant.name || 'Unknown'}</h5>
+                    <p className="card-text">{restaurant.cuisine || 'N/A'}</p>
                   </div>
                 </div>
-              );
-            })
+              </div>
+            ))
           )}
         </div>
       )}
