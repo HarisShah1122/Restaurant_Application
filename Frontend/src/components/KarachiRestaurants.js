@@ -3,7 +3,6 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import SearchFilter from './SearchFilter';
 import RestaurantList from './RestaurantList';
-import HomePage from './HomePage';
 import Toast from './Toast';
 import LoadingSpinner from './LoadingSpinner';
 
@@ -26,13 +25,6 @@ function KarachiRestaurants() {
   const ratings = [3.0, 3.5, 4.0, 4.5, 5.0];
   const [token, setToken] = useState(localStorage.getItem('token') || '');
   const navigate = useNavigate();
-  const [time, setTime] = useState(new Date());
-
-  // Update time every second
-  useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   useEffect(() => {
     if (!token) {
@@ -60,19 +52,33 @@ function KarachiRestaurants() {
       });
 
       // Normalize restaurant data
-      const normalizedRestaurants = response.data.restaurants.map((restaurant) => {
+      const restaurantData = response.data.data || response.data.restaurants || [];
+      const normalizedRestaurants = restaurantData.map((restaurant) => {
+        // Handle invalid images field (string or non-array)
+        let normalizedImages = [];
+        if (Array.isArray(restaurant.images)) {
+          normalizedImages = restaurant.images.map((img) =>
+            img.replace(/^\/public\/Uploads\/images\//, 'uploads/')
+          );
+        } else if (typeof restaurant.images === 'string') {
+          console.warn(`Converting string images to array for restaurant ${restaurant.name || 'Unknown'} (ID: ${restaurant._id || restaurant.id}):`, restaurant.images);
+          normalizedImages = [
+            restaurant.images.replace(/^\/public\/Uploads\/images\//, 'uploads/')
+          ];
+        } else {
+          console.warn(`Invalid images field for restaurant ${restaurant.name || 'Unknown'} (ID: ${restaurant._id || restaurant.id}):`, restaurant.images);
+        }
+
         const normalized = {
           ...restaurant,
-          images: Array.isArray(restaurant.images) ? restaurant.images : [],
+          images: normalizedImages,
           _id: restaurant._id || restaurant.id || Math.random().toString(36).substring(2),
+          id: restaurant._id || restaurant.id || Math.random().toString(36).substring(2),
           name: restaurant.name || 'Unknown',
           cuisine: restaurant.cuisine || 'N/A',
           location: restaurant.location || 'N/A',
           rating: restaurant.rating || 0,
         };
-        if (!Array.isArray(restaurant.images)) {
-          console.warn(`Invalid images field for restaurant ${restaurant.name || 'Unknown'} (ID: ${restaurant._id || restaurant.id}):`, restaurant.images);
-        }
         return normalized;
       });
       console.log('Normalized restaurants:', normalizedRestaurants);
@@ -80,10 +86,12 @@ function KarachiRestaurants() {
     } catch (error) {
       console.error('Error fetching restaurants:', {
         message: error.message,
+        code: error.code,
         status: error.response?.status,
         data: error.response?.data,
+        headers: error.response?.headers,
       });
-      const errorMessage = error.response?.data?.error || error.message;
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to fetch restaurants';
       setToast({ show: true, message: `Error fetching restaurants: ${errorMessage}` });
       if (error.response?.status === 401 || error.response?.status === 403) {
         localStorage.removeItem('token');
@@ -118,13 +126,6 @@ function KarachiRestaurants() {
       return;
     }
 
-    if (!token) {
-      setFormError('Please log in to add a restaurant');
-      setFormLoading(false);
-      navigate('/login');
-      return;
-    }
-
     try {
       const payload = new FormData();
       payload.append('name', formData.name);
@@ -152,6 +153,7 @@ function KarachiRestaurants() {
         ...response.data,
         images: Array.isArray(response.data.images) ? response.data.images : [],
         _id: response.data._id || response.data.id || Math.random().toString(36).substring(2),
+        id: response.data._id || response.data.id || Math.random().toString(36).substring(2),
         name: response.data.name || 'Unknown',
         cuisine: response.data.cuisine || 'N/A',
         location: response.data.location || 'N/A',
@@ -165,6 +167,7 @@ function KarachiRestaurants() {
     } catch (error) {
       console.error('Error adding restaurant:', {
         message: error.message,
+        code: error.code,
         status: error.response?.status,
         data: error.response?.data,
       });
@@ -199,13 +202,6 @@ function KarachiRestaurants() {
 
   return (
     <div className="container mx-auto p-4">
-      <HomePage
-        time={time}
-        handleSearch={handleSearch}
-        handleFilter={handleFilter}
-        restaurants={restaurants}
-        loading={loading}
-      />
       <h1 className="text-3xl font-bold mb-6 text-center">Karachi Restaurants</h1>
       <div className="text-end mb-3">
         <button className="btn btn-primary" onClick={() => setShowModal(true)}>
