@@ -16,27 +16,37 @@ const RestaurantList = ({ restaurants }) => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {restaurants.map((restaurant) => (
-              <tr key={restaurant.id}>
-                <td className="px-6 py-4 whitespace-nowrap">{restaurant.name}</td>
-                <td className="px-6 py-4 whitespace-nowrap">{restaurant.cuisine}</td>
-                <td className="px-6 py-4 whitespace-nowrap">{restaurant.location}</td>
-                <td className="px-6 py-4 whitespace-nowrap">{restaurant.rating}</td>
-                <td className="px-6 py-4">
-                  <div className="flex space-x-2">
-                    {restaurant.images.map((image, index) => (
-                      <img
-                        key={index}
-                        src={image}
-                        alt={`Restaurant ${restaurant.name} ${index + 1}`}
-                        className="w-16 h-16 object-cover rounded"
-                        onError={(e) => (e.target.src = '/images/placeholder.png')}
-                      />
-                    ))}
-                  </div>
-                </td>
+            {restaurants.length === 0 ? (
+              <tr>
+                <td colSpan="5" className="px-6 py-4 text-center">No restaurants found.</td>
               </tr>
-            ))}
+            ) : (
+              restaurants.map((restaurant) => (
+                <tr key={restaurant._id || restaurant.id}>
+                  <td className="px-6 py-4 whitespace-nowrap">{restaurant.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{restaurant.cuisine}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{restaurant.location}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{restaurant.rating}</td>
+                  <td className="px-6 py-4">
+                    <div className="flex space-x-2">
+                      {Array.isArray(restaurant.images) && restaurant.images.length > 0 ? (
+                        restaurant.images.map((image, index) => (
+                          <img
+                            key={index}
+                            src={`http://localhost:8081/${image}`}
+                            alt={`Restaurant ${restaurant.name} ${index + 1}`}
+                            className="w-16 h-16 object-cover rounded"
+                            onError={(e) => (e.target.src = '/images/placeholder.png')}
+                          />
+                        ))
+                      ) : (
+                        <span>No images available</span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import SearchFilter from './SearchFilter';
 import RestaurantList from './RestaurantList';
 import Toast from './Toast';
-import LoadingSpinner from './LoadingSpinner'; 
+import LoadingSpinner from './LoadingSpinner';
 
 function KarachiRestaurants() {
   const [restaurants, setRestaurants] = useState([]);
@@ -13,13 +13,13 @@ function KarachiRestaurants() {
     cuisine: '',
     location: 'Karachi',
     rating: '',
-    images: [], 
+    images: [],
   });
   const [toast, setToast] = useState({ show: false, message: '' });
   const [showModal, setShowModal] = useState(false);
-  const [formError, setFormError] = useState(null); 
-  const [formLoading, setFormLoading] = useState(false); 
-  const [loading, setLoading] = useState(false); 
+  const [formError, setFormError] = useState(null);
+  const [formLoading, setFormLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const cuisines = ['Biryani', 'Karahi', 'Tikka', 'Nihari', 'Pulao', 'Haleem', 'Chapli', 'Seekh', 'Qorma', 'Samosa'];
   const locations = ['Karachi', 'Clifton', 'Gulshan', 'Defence', 'Saddar'];
   const ratings = [3.0, 3.5, 4.0, 4.5, 5.0];
@@ -27,27 +27,43 @@ function KarachiRestaurants() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (!token) {
+      setToast({ show: true, message: 'Please log in to view restaurants' });
+      navigate('/login');
+      return;
+    }
     fetchRestaurants();
-  }, []);
+  }, [token]);
 
   const fetchRestaurants = async (query = '', filters = {}) => {
     setLoading(true);
     try {
-      const url = new URL('http://localhost:8081/restaurants/search'); 
+      console.log('Fetching restaurants with token:', token); // Debug log
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const url = new URL('http://localhost:8081/restaurants/search');
       const params = new URLSearchParams({ ...filters, location: 'Karachi', query, limit: 10, page: 1 });
       url.search = params.toString();
 
       const response = await axios.get(url.toString(), {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setRestaurants(response.data.restaurants); 
+      setRestaurants(response.data.restaurants);
     } catch (error) {
       console.error('Error fetching restaurants:', {
         message: error.message,
         status: error.response?.status,
         data: error.response?.data,
       });
-      setToast({ show: true, message: `Error fetching restaurants: ${error.response?.data?.error || error.message}` });
+      const errorMessage = error.response?.data?.error || error.message;
+      setToast({ show: true, message: `Error fetching restaurants: ${errorMessage}` });
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        localStorage.removeItem('token');
+        setToken('');
+        navigate('/login');
+      }
     } finally {
       setLoading(false);
     }
@@ -56,11 +72,11 @@ function KarachiRestaurants() {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    setFormError(null); 
+    setFormError(null);
   };
 
   const handleImageChange = (e) => {
-    const files = Array.from(e.target.files).slice(0, 30); 
+    const files = Array.from(e.target.files).slice(0, 30);
     setFormData((prev) => ({ ...prev, images: files }));
     setFormError(null);
   };
@@ -93,7 +109,7 @@ function KarachiRestaurants() {
 
       console.log('Submitting restaurant with data:', Object.fromEntries(payload));
       const response = await axios.post('http://localhost:8081/restaurants', payload, {
-        headers: { 
+        headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data',
         },
@@ -154,7 +170,12 @@ function KarachiRestaurants() {
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">Add New Restaurant</h5>
-                <button type="button" className="btn-close" onClick={() => setShowModal(false)} disabled={formLoading}></button>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowModal(false)}
+                  disabled={formLoading}
+                ></button>
               </div>
               <div className="modal-body">
                 {formError && (
